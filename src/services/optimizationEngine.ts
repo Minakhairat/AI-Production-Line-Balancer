@@ -7,15 +7,18 @@ import {
   SplitOperation,
   Operation,
   Workstation,
+  CalculationResults,
 } from '../types/lineBalancing';
 import { calculateLineBalancing } from './calculationEngine';
+import { calculateOperationStandardTime } from '../utils/engineeringCalculationEngine';
 
 /**
  * AI Production Line Balancer - Industrial Engineering Optimization Engine
  * Implements:
  * - Ranked Positional Weight (RPW / Helgeson-Birnie)
  * - Largest Candidate Rule (LCR)
- * - Line-Leveling Heuristic with constraint satisfaction
+ * - Parallel Operator Workload Division (Surge Capacity)
+ * - Strict Precedence DAG satisfaction (no backward flow)
  */
 
 interface OperationGraphNode {
@@ -26,13 +29,7 @@ interface OperationGraphNode {
 }
 
 function getOpTotalTime(op: Operation): number {
-  return (
-    (op.manualTime || 0) +
-    (op.machineTime || 0) +
-    (op.automaticTime || 0) +
-    (op.walkingTime || 0) +
-    (op.handlingTime || 0)
-  );
+  return calculateOperationStandardTime(op);
 }
 
 // Compute Ranked Positional Weights (RPW) based on precedence graph
@@ -92,10 +89,50 @@ function computeRPW(operations: Operation[]): Map<string, OperationGraphNode> {
   return nodeMap;
 }
 
-export function generateOptimizationScenarios(line: ProductionLine): OptimizationScenario[] {
-  const currentResults = calculateLineBalancing(line);
+/**
+ * Computes maximum allowed station sequence for each operation based on fixed successors
+ */
+function computeMaxAllowedSequence(
+  operations: Operation[],
+  workstations: Workstation[],
+  rpwGraph: Map<string, OperationGraphNode>
+): Map<string, number> {
+  const stationSeqMap = new Map<string, number>();
+  workstations.forEach((ws) => stationSeqMap.set(ws.id, ws.sequence));
+
+  const maxSeqMap = new Map<string, number>();
+  const maxLineSeq = Math.max(...workstations.map((ws) => ws.sequence), 1);
+
+  operations.forEach((op) => {
+    if (op.transferRestriction === 'fixed_to_station') {
+      maxSeqMap.set(op.id, stationSeqMap.get(op.stationId) || maxLineSeq);
+      return;
+    }
+
+    let minFixedSuccSeq = maxLineSeq;
+    const succs = rpwGraph.get(op.id)?.successors || [];
+    succs.forEach((succId) => {
+      const succOp = operations.find((o) => o.id === succId);
+      if (succOp?.transferRestriction === 'fixed_to_station') {
+        const fixedSeq = stationSeqMap.get(succOp.stationId) || maxLineSeq;
+        if (fixedSeq < minFixedSuccSeq) {
+          minFixedSuccSeq = fixedSeq;
+        }
+      }
+    });
+
+    maxSeqMap.set(op.id, minFixedSuccSeq);
+  });
+
+  return maxSeqMap;
+}
+
+export function generateOptimizationScenarios(
+  line: ProductionLine,
+  _baselineResults?: CalculationResults
+): OptimizationScenario[] {
+  const currentResults = _baselineResults || calculateLineBalancing(line);
   const targetTaktTime = currentResults.taktTime;
-  const theoreticalMin = currentResults.theoreticalMinStations;
   const currentCount = line.workstations.length;
   const rpwGraph = computeRPW(line.operations);
 
@@ -103,115 +140,131 @@ export function generateOptimizationScenarios(line: ProductionLine): Optimizatio
   const cloneLine = (): ProductionLine => JSON.parse(JSON.stringify(line));
 
   // -------------------------------------------------------------
-  // Scenario A: Balance Leveling (تحسين التوازن وتوزيع الأحمال دون زيادة العمالة)
+  // Scenario A: Workload Leveling (Helgeson-Birnie RPW)
+  // Rebalance operations across existing stations without adding headcount
   // -------------------------------------------------------------
   const scenarioA = (() => {
     const cloned = cloneLine();
     const sortedStations = [...cloned.workstations].sort((a, b) => a.sequence - b.sequence);
-    const transfers: OperationTransfer[] = [];
-    const combinedOps: CombinedOperation[] = [];
-    const splitOps: SplitOperation[] = [];
+    const stationSeqMap = new Map<string, number>();
+    sortedStations.forEach((ws) => stationSeqMap.set(ws.id, ws.sequence));
 
-    // Sort operations by RPW descending
-    const sortedOps = [...cloned.operations].sort((a, b) => {
-      const weightA = rpwGraph.get(a.id)?.positionalWeight || 0;
-      const weightB = rpwGraph.get(b.id)?.positionalWeight || 0;
-      return weightB - weightA;
-    });
+    const maxAllowedSeqMap = computeMaxAllowedSequence(cloned.operations, sortedStations, rpwGraph);
 
-    // Target cycle time for Leveling is the takt time or slight buffer
-    const targetCycle = targetTaktTime;
-    const stationLoads: { [stationId: string]: number } = {};
-    const stationOps: { [stationId: string]: Operation[] } = {};
-    sortedStations.forEach((ws) => {
-      stationLoads[ws.id] = 0;
-      stationOps[ws.id] = [];
-    });
+    const totalWork = cloned.operations.reduce((acc, o) => acc + getOpTotalTime(o), 0);
+    const maxSingleTask = Math.max(...cloned.operations.map(getOpTotalTime));
+    const averageStationWork = Math.ceil(totalWork / sortedStations.length);
 
-    // Check fixed operations first
-    const unassignedOps: Operation[] = [];
-    sortedOps.forEach((op) => {
-      if (op.transferRestriction === 'fixed_to_station' && stationLoads[op.stationId] !== undefined) {
-        stationLoads[op.stationId] += getOpTotalTime(op);
-        stationOps[op.stationId].push(op);
-      } else {
-        unassignedOps.push(op);
-      }
-    });
+    // Iteratively determine the lowest feasible cycle time that accommodates all tasks
+    let targetCycle = Math.max(averageStationWork, maxSingleTask);
+    let bestAssignment: { [stationId: string]: Operation[] } | null = null;
+    let bestTransfers: OperationTransfer[] = [];
 
-    // Assign remaining operations using RPW while respecting precedence
-    const assignedIds = new Set<string>(
-      Object.values(stationOps)
-        .flat()
-        .map((o) => o.id)
-    );
+    // Binary / linear search for optimal leveled cycle time
+    for (let trialCycle = targetCycle; trialCycle <= currentResults.lineCycleTime; trialCycle += 2) {
+      const trialStationOps: { [stationId: string]: Operation[] } = {};
+      const trialStationLoads: { [stationId: string]: number } = {};
+      sortedStations.forEach((ws) => {
+        trialStationOps[ws.id] = [];
+        trialStationLoads[ws.id] = 0;
+      });
 
-    for (let sIdx = 0; sIdx < sortedStations.length; sIdx++) {
-      const currentStation = sortedStations[sIdx];
-      let stationLoad = stationLoads[currentStation.id] || 0;
+      const trialTransfers: OperationTransfer[] = [];
+      const assignedStationSeq = new Map<string, number>();
 
-      let progress = true;
-      while (progress) {
-        progress = false;
+      // 1. Assign fixed operations first
+      cloned.operations.forEach((op) => {
+        if (op.transferRestriction === 'fixed_to_station' && trialStationLoads[op.stationId] !== undefined) {
+          trialStationLoads[op.stationId] += getOpTotalTime(op);
+          trialStationOps[op.stationId].push(op);
+          assignedStationSeq.set(op.id, stationSeqMap.get(op.stationId) || 1);
+        }
+      });
 
-        for (let i = 0; i < unassignedOps.length; i++) {
-          const candidate = unassignedOps[i];
-          if (assignedIds.has(candidate.id)) continue;
+      // 2. Order remaining operations by RPW
+      const remainingOps = cloned.operations
+        .filter((o) => !assignedStationSeq.has(o.id))
+        .sort((a, b) => {
+          const wA = rpwGraph.get(a.id)?.positionalWeight || 0;
+          const wB = rpwGraph.get(b.id)?.positionalWeight || 0;
+          return wB - wA;
+        });
 
-          // Check precedence: all predecessors must already be assigned to this station or previous stations
-          const predsSatisfied = (candidate.precedenceIds || []).every((pId) => assignedIds.has(pId));
-          if (!predsSatisfied) continue;
+      let feasible = true;
 
-          const opDuration = getOpTotalTime(candidate);
+      for (let sIdx = 0; sIdx < sortedStations.length; sIdx++) {
+        const currentWs = sortedStations[sIdx];
+        const currSeq = currentWs.sequence;
 
-          // If it fits into targetCycle or is the last station, assign it
-          if (stationLoad + opDuration <= targetCycle * 1.05 || sIdx === sortedStations.length - 1) {
-            stationLoad += opDuration;
-            stationOps[currentStation.id].push(candidate);
-            assignedIds.add(candidate.id);
-            stationLoads[currentStation.id] = stationLoad;
+        let progress = true;
+        while (progress) {
+          progress = false;
+          for (let i = 0; i < remainingOps.length; i++) {
+            const candidate = remainingOps[i];
+            if (assignedStationSeq.has(candidate.id)) continue;
 
-            if (candidate.stationId !== currentStation.id) {
-              transfers.push({
-                operationId: candidate.id,
-                operationName: candidate.name,
-                fromStationId: candidate.stationId,
-                toStationId: currentStation.id,
-                reason: `Leveling: balances cycle time closer to Takt Time (${Math.round(targetTaktTime)}s)`,
-                durationSeconds: opDuration,
-              });
-              candidate.stationId = currentStation.id;
+            // Precedence check: All predecessors must be assigned to stations <= currSeq
+            const predsSatisfied = (candidate.precedenceIds || []).every((pId) => {
+              const pSeq = assignedStationSeq.get(pId);
+              return pSeq !== undefined && pSeq <= currSeq;
+            });
+            if (!predsSatisfied) continue;
+
+            // Successor check: Candidate cannot be placed after its fixed successors
+            const maxAllowed = maxAllowedSeqMap.get(candidate.id) ?? sortedStations.length;
+            if (currSeq > maxAllowed) continue;
+
+            const duration = getOpTotalTime(candidate);
+            const currentLoad = trialStationLoads[currentWs.id] || 0;
+
+            if (currentLoad + duration <= trialCycle || sIdx === sortedStations.length - 1) {
+              trialStationLoads[currentWs.id] = currentLoad + duration;
+              trialStationOps[currentWs.id].push(candidate);
+              assignedStationSeq.set(candidate.id, currSeq);
+
+              if (candidate.stationId !== currentWs.id) {
+                trialTransfers.push({
+                  operationId: candidate.id,
+                  operationName: candidate.name,
+                  fromStationId: candidate.stationId,
+                  toStationId: currentWs.id,
+                  reason: `Leveling: smooths station cycle toward theoretical optimum (${averageStationWork}s)`,
+                  durationSeconds: duration,
+                });
+                candidate.stationId = currentWs.id;
+              }
+              progress = true;
+              break;
             }
-            progress = true;
-            break;
           }
         }
       }
-    }
 
-    // Combine compatible consecutive manual operations if flagged
-    const opsToCombine = cloned.operations.filter((o) => o.canBeCombined && o.type === 'manual');
-    if (opsToCombine.length >= 2) {
-      const op1 = opsToCombine[0];
-      const op2 = opsToCombine[1];
-      if (op1.stationId === op2.stationId) {
-        combinedOps.push({
-          primaryOpId: op1.id,
-          combinedOpIds: [op1.id, op2.id],
-          originalTime: getOpTotalTime(op1) + getOpTotalTime(op2),
-          resultingTime: (getOpTotalTime(op1) + getOpTotalTime(op2)) * 0.88, // 12% elimination of repeated handling
-          timeSaved: (getOpTotalTime(op1) + getOpTotalTime(op2)) * 0.12,
-          rationale: `Combine ${op1.name} with ${op2.name} to eliminate redundant material pickup and handling.`,
-        });
+      // Check if all operations were assigned and no station exceeded trialCycle by more than 5%
+      const allAssigned = cloned.operations.every((o) => assignedStationSeq.has(o.id));
+      const maxWsLoad = Math.max(...Object.values(trialStationLoads));
+
+      if (allAssigned && maxWsLoad <= trialCycle * 1.05) {
+        bestAssignment = trialStationOps;
+        bestTransfers = trialTransfers;
+        break;
       }
     }
 
-    // Update cloned line
-    cloned.operations = Object.values(stationOps).flat();
+    // Fallback if strict leveling couldn't pack within trial
+    if (!bestAssignment) {
+      bestAssignment = {};
+      sortedStations.forEach((ws) => {
+        bestAssignment![ws.id] = cloned.operations.filter((o) => o.stationId === ws.id);
+      });
+      bestTransfers = [];
+    }
+
+    cloned.operations = Object.values(bestAssignment).flat();
     const metricsA = calculateLineBalancing(cloned);
 
     const assignmentsA: ScenarioWorkstationAssignment[] = sortedStations.map((ws) => {
-      const ops = stationOps[ws.id] || [];
+      const ops = bestAssignment![ws.id] || [];
       const cycle = ops.reduce((acc, o) => acc + getOpTotalTime(o), 0);
       return {
         stationId: ws.id,
@@ -225,21 +278,23 @@ export function generateOptimizationScenarios(line: ProductionLine): Optimizatio
       };
     });
 
-    const scenario: OptimizationScenario = {
-      id: 'scenario-a',
+    const isFeasible = metricsA.validationErrors.filter((e) => e.type === 'error').length === 0;
+
+    return {
+      id: 'scenario-a' as const,
       name: 'Scenario A: Workload Leveling & Balancing / سيناريو أ: تسوية الأحمال وموازنة الخط',
       title: 'Workload Leveling (Heijunka / RPW)',
       description: 'Redistribute operations across existing stations using Ranked Positional Weight algorithm without adding or removing headcount.',
       objective: 'Minimize balance delay and eliminate bottlenecks while preserving station count and current equipment.',
-      algorithmUsed: 'Ranked Positional Weight (RPW)',
+      algorithmUsed: 'Ranked Positional Weight (RPW)' as const,
       assignments: assignmentsA,
-      transfers,
-      combinedOperations: combinedOps,
-      splitOperations: splitOps,
+      transfers: bestTransfers,
+      combinedOperations: [],
+      splitOperations: [],
       metrics: metricsA,
       advantages: [
         'Zero capital expenditure (CapEx) required / لا يتطلب أي استثمارات رأسمالية إضافية',
-        'Reduces balance delay from ' + currentResults.balanceDelay.toFixed(1) + '% to ' + metricsA.balanceDelay.toFixed(1) + '%',
+        'Improves line balancing efficiency from ' + currentResults.lineEfficiency.toFixed(1) + '% to ' + metricsA.lineEfficiency.toFixed(1) + '%',
         'Maintains existing workstation layout and operator team size',
         'Eliminates major bottlenecks by moving unconstrained tasks downstream',
       ],
@@ -247,31 +302,28 @@ export function generateOptimizationScenarios(line: ProductionLine): Optimizatio
         'Requires cross-training operators on reallocated operations',
         'Slight learning curve during the first week of implementation',
       ],
-      isFeasible: metricsA.validationErrors.filter((e) => e.type === 'error').length === 0,
-      engineeringJustification: `Helgeson-Birnie RPW heuristic ordered tasks by cumulative downstream work content. Tasks were allocated sequentially into the ${sortedStations.length} available workstations up to the target cycle time threshold of ${targetTaktTime.toFixed(1)}s. This smoothed line variation and increased balance efficiency.`,
+      isFeasible,
+      engineeringJustification: `Helgeson-Birnie RPW heuristic ordered tasks by cumulative downstream work content. Tasks were allocated sequentially into the ${sortedStations.length} available workstations up to the target cycle threshold, satisfying all topological precedence constraints.`,
     };
-
-    return scenario;
   })();
 
   // -------------------------------------------------------------
-  // Scenario B: Lean Headcount & Station Reduction (تقليص العمالة والمحطات)
+  // Scenario B: Lean Headcount & Station Reduction (Largest Candidate Rule)
   // -------------------------------------------------------------
   const scenarioB = (() => {
     const cloned = cloneLine();
-    // Safely clamp targetStationCount between 1 and currentCount
+    const sortedOriginal = [...cloned.workstations].sort((a, b) => a.sequence - b.sequence);
     const targetStationCount = Math.max(
       1,
-      Math.min(currentCount, theoreticalMin, currentCount > 1 ? currentCount - 1 : 1)
+      Math.min(currentCount, currentResults.theoreticalMinStations, currentCount > 1 ? currentCount - 1 : 1)
     );
-    const sortedOriginal = [...cloned.workstations].sort((a, b) => a.sequence - b.sequence);
     const reducedWorkstations = sortedOriginal.slice(0, targetStationCount);
+    const stationSeqMap = new Map<string, number>();
+    reducedWorkstations.forEach((ws) => stationSeqMap.set(ws.id, ws.sequence));
+
+    const maxAllowedSeqMap = computeMaxAllowedSequence(cloned.operations, reducedWorkstations, rpwGraph);
 
     const transfers: OperationTransfer[] = [];
-    const combinedOps: CombinedOperation[] = [];
-    const splitOps: SplitOperation[] = [];
-
-    // Sort operations by Largest Candidate Rule (LCR) descending
     const sortedOps = [...cloned.operations].sort((a, b) => getOpTotalTime(b) - getOpTotalTime(a));
 
     const stationOps: { [stationId: string]: Operation[] } = {};
@@ -281,30 +333,44 @@ export function generateOptimizationScenarios(line: ProductionLine): Optimizatio
       stationLoads[ws.id] = 0;
     });
 
-    const assignedIds = new Set<string>();
+    const assignedStationSeq = new Map<string, number>();
+
+    // 1. Assign fixed tasks first if they map to available stations
+    sortedOps.forEach((op) => {
+      if (op.transferRestriction === 'fixed_to_station' && stationLoads[op.stationId] !== undefined) {
+        stationLoads[op.stationId] += getOpTotalTime(op);
+        stationOps[op.stationId].push(op);
+        assignedStationSeq.set(op.id, stationSeqMap.get(op.stationId) || 1);
+      }
+    });
 
     for (let sIdx = 0; sIdx < reducedWorkstations.length; sIdx++) {
       const currentStation = reducedWorkstations[sIdx];
-      let stationLoad = stationLoads[currentStation.id] || 0;
+      const currSeq = currentStation.sequence;
 
       let progress = true;
       while (progress) {
         progress = false;
         for (let i = 0; i < sortedOps.length; i++) {
           const candidate = sortedOps[i];
-          if (assignedIds.has(candidate.id)) continue;
+          if (assignedStationSeq.has(candidate.id)) continue;
 
-          // Precedence check
-          const predsDone = (candidate.precedenceIds || []).every((pId) => assignedIds.has(pId));
+          const predsDone = (candidate.precedenceIds || []).every((pId) => {
+            const predSeq = assignedStationSeq.get(pId);
+            return predSeq !== undefined && predSeq <= currSeq;
+          });
           if (!predsDone) continue;
 
+          const maxAllowed = maxAllowedSeqMap.get(candidate.id) ?? reducedWorkstations.length;
+          if (currSeq > maxAllowed) continue;
+
           const duration = getOpTotalTime(candidate);
-          // Allocate up to targetTaktTime or pack into last station
-          if (stationLoad + duration <= targetTaktTime * 1.15 || sIdx === reducedWorkstations.length - 1) {
-            stationLoad += duration;
+          const currentLoad = stationLoads[currentStation.id] || 0;
+
+          if (currentLoad + duration <= targetTaktTime * 1.15 || sIdx === reducedWorkstations.length - 1) {
+            stationLoads[currentStation.id] = currentLoad + duration;
             stationOps[currentStation.id].push(candidate);
-            stationLoads[currentStation.id] = stationLoad;
-            assignedIds.add(candidate.id);
+            assignedStationSeq.set(candidate.id, currSeq);
 
             if (candidate.stationId !== currentStation.id) {
               transfers.push({
@@ -324,25 +390,32 @@ export function generateOptimizationScenarios(line: ProductionLine): Optimizatio
       }
     }
 
-    // Remaining unassigned operations (if any) safely pushed to the last valid station
+    // Remaining operations safely assigned
     sortedOps.forEach((op) => {
-      if (!assignedIds.has(op.id)) {
-        const lastStation = reducedWorkstations[reducedWorkstations.length - 1] || sortedOriginal[0];
-        if (lastStation) {
-          stationOps[lastStation.id].push(op);
-          stationLoads[lastStation.id] = (stationLoads[lastStation.id] || 0) + getOpTotalTime(op);
-          assignedIds.add(op.id);
-          if (op.stationId !== lastStation.id) {
-            transfers.push({
-              operationId: op.id,
-              operationName: op.name,
-              fromStationId: op.stationId,
-              toStationId: lastStation.id,
-              reason: 'Consolidated into final station under lean headcount',
-              durationSeconds: getOpTotalTime(op),
-            });
-            op.stationId = lastStation.id;
-          }
+      if (!assignedStationSeq.has(op.id)) {
+        let minFeasibleSeq = 1;
+        (op.precedenceIds || []).forEach((pId) => {
+          const pSeq = assignedStationSeq.get(pId) || 1;
+          if (pSeq > minFeasibleSeq) minFeasibleSeq = pSeq;
+        });
+
+        const eligible = reducedWorkstations.filter((ws) => ws.sequence >= minFeasibleSeq);
+        const lastStation = eligible[eligible.length - 1] || reducedWorkstations[reducedWorkstations.length - 1];
+
+        stationOps[lastStation.id].push(op);
+        stationLoads[lastStation.id] = (stationLoads[lastStation.id] || 0) + getOpTotalTime(op);
+        assignedStationSeq.set(op.id, lastStation.sequence);
+
+        if (op.stationId !== lastStation.id) {
+          transfers.push({
+            operationId: op.id,
+            operationName: op.name,
+            fromStationId: op.stationId,
+            toStationId: lastStation.id,
+            reason: 'Consolidated into station under lean headcount',
+            durationSeconds: getOpTotalTime(op),
+          });
+          op.stationId = lastStation.id;
         }
       }
     });
@@ -366,19 +439,19 @@ export function generateOptimizationScenarios(line: ProductionLine): Optimizatio
       };
     });
 
-    const isFeasible = metricsB.lineCycleTime <= targetTaktTime * 1.1;
+    const isFeasible = metricsB.lineCycleTime <= targetTaktTime * 1.15;
 
-    const scenario: OptimizationScenario = {
-      id: 'scenario-b',
+    return {
+      id: 'scenario-b' as const,
       name: 'Scenario B: Lean Headcount & Workstation Consolidation / سيناريو ب: تقليص العمالة ودمج المحطات',
       title: 'Lean Headcount Reduction (LCR / Consolidation)',
       description: `Compress the assembly flow into ${targetStationCount} workstations (from ${currentCount}), liberating 1-2 operators for Kaizen or secondary lines.`,
       objective: 'Maximize labor productivity and reduce direct labor cost per unit while meeting takt time.',
-      algorithmUsed: 'Largest Candidate Rule (LCR)',
+      algorithmUsed: 'Largest Candidate Rule (LCR)' as const,
       assignments: assignmentsB,
       transfers,
-      combinedOperations: combinedOps,
-      splitOperations: splitOps,
+      combinedOperations: [],
+      splitOperations: [],
       metrics: metricsB,
       advantages: [
         `Reduces active workstations from ${currentCount} to ${targetStationCount}`,
@@ -397,158 +470,71 @@ export function generateOptimizationScenarios(line: ProductionLine): Optimizatio
           ],
       engineeringJustification: `Largest Candidate Rule prioritized high-work-content operations to maximize station packing density. Work content was consolidated into ${targetStationCount} stations, achieving a lean footprint matching theoretical minimum calculation.`,
     };
-
-    return scenario;
   })();
 
   // -------------------------------------------------------------
-  // Scenario C: Maximum Capacity Surge (أقصى طاقة إنتاجية ومضاعفة المخرجات)
+  // Scenario C: Maximum Capacity Surge (Parallel Operators on Bottleneck)
   // -------------------------------------------------------------
   const scenarioC = (() => {
     const cloned = cloneLine();
     const sortedStations = [...cloned.workstations].sort((a, b) => a.sequence - b.sequence);
     const transfers: OperationTransfer[] = [];
-    const combinedOps: CombinedOperation[] = [];
-    const splitOps: SplitOperation[] = [];
 
-    // Find the longest bottleneck operation that can be split
-    const splittableOp = cloned.operations.find((o) => o.canBeSplit && getOpTotalTime(o) > 20);
-    if (splittableOp && sortedStations.length >= 2) {
-      const origTime = getOpTotalTime(splittableOp);
-      const halfTime = Math.round(origTime / 2);
-      const targetNextStation = sortedStations[1].id;
+    // Find the critical bottleneck station from baseline
+    const currentBottleneckStationId = currentResults.bottlenecks[0] || sortedStations[0].id;
+    const bottleneckStation = cloned.workstations.find((ws) => ws.id === currentBottleneckStationId);
 
-      splitOps.push({
-        originalOpId: splittableOp.id,
-        operationName: splittableOp.name,
-        originalTime: origTime,
-        splitParts: [
-          { name: `${splittableOp.name} (Part 1 - Subassembly)`, stationId: splittableOp.stationId, time: halfTime },
-          { name: `${splittableOp.name} (Part 2 - Final Fastening)`, stationId: targetNextStation, time: origTime - halfTime },
-        ],
-        rationale: 'Split operation across 2 consecutive stations to drop the critical path bottleneck and surge line throughput.',
+    // Add parallel surge operator on the bottleneck station
+    if (bottleneckStation) {
+      bottleneckStation.maxOperators = Math.max(bottleneckStation.maxOperators, 2);
+      cloned.operators.push({
+        id: `op-surge-${bottleneckStation.id}`,
+        name: 'فني مساند للذروة (Surge Parallel Operator)',
+        shift: 'Shift 1',
+        assignedStationId: bottleneckStation.id,
+        skills: [{ skill: 'Assembly', level: 5 }],
       });
-
-      // Split the operation in the cloned line
-      splittableOp.manualTime = Math.round(splittableOp.manualTime / 2);
-      splittableOp.machineTime = Math.round(splittableOp.machineTime / 2);
-
-      // Create new sub-operation
-      const newSubOp: Operation = {
-        id: `${splittableOp.id}-p2`,
-        name: `${splittableOp.name} [Split Part 2]`,
-        stationId: targetNextStation,
-        manualTime: origTime - halfTime,
-        machineTime: 0,
-        automaticTime: 0,
-        walkingTime: 0,
-        handlingTime: 0,
-        operatorCount: 1,
-        precedenceIds: [splittableOp.id],
-        requiredSkills: splittableOp.requiredSkills,
-        type: splittableOp.type,
-        canBeSplit: false,
-        canBeCombined: false,
-        transferRestriction: 'none',
-      };
-      cloned.operations.push(newSubOp);
     }
 
-    // Add parallel operator on bottleneck station
-    const currentBottleneckStation = currentResults.bottlenecks[0] || sortedStations[0].id;
-    const targetWs = cloned.workstations.find((ws) => ws.id === currentBottleneckStation);
-    if (targetWs) {
-      targetWs.maxOperators = Math.max(targetWs.maxOperators, 2);
+    // Distribute operations into bottleneck station between the 2 operators
+    const opsAtBottleneck = cloned.operations.filter((o) => o.stationId === currentBottleneckStationId);
+    if (opsAtBottleneck.length >= 2) {
+      // Pin first half to operator 1 and second half to operator 2
+      const op1Id = cloned.operators.find((w) => w.assignedStationId === currentBottleneckStationId && w.id !== `op-surge-${bottleneckStation?.id}`)?.id;
+      const op2Id = `op-surge-${bottleneckStation?.id}`;
+      opsAtBottleneck.forEach((op, idx) => {
+        op.operatorId = idx % 2 === 0 ? op1Id : op2Id;
+      });
     }
 
-    // Rebalance with aggressive cycle time reduction target (e.g. 75% of takt)
-    const aggressiveTarget = targetTaktTime * 0.75;
-    const stationOps: { [stationId: string]: Operation[] } = {};
-    sortedStations.forEach((ws) => (stationOps[ws.id] = []));
-
-    // Re-distribute operations evenly
-    const sortedOps = [...cloned.operations].sort((a, b) => getOpTotalTime(b) - getOpTotalTime(a));
-    const assignedIds = new Set<string>();
-
-    for (let sIdx = 0; sIdx < sortedStations.length; sIdx++) {
-      const currentStation = sortedStations[sIdx];
-      let stationLoad = 0;
-
-      let progress = true;
-      while (progress) {
-        progress = false;
-        for (let i = 0; i < sortedOps.length; i++) {
-          const candidate = sortedOps[i];
-          if (assignedIds.has(candidate.id)) continue;
-
-          const predsDone = (candidate.precedenceIds || []).every((pId) => assignedIds.has(pId));
-          if (!predsDone) continue;
-
-          const duration = getOpTotalTime(candidate);
-          const effectiveCapacity = currentStation.id === currentBottleneckStation ? aggressiveTarget * 1.5 : aggressiveTarget;
-
-          if (stationLoad + duration <= effectiveCapacity || sIdx === sortedStations.length - 1) {
-            stationLoad += duration;
-            stationOps[currentStation.id].push(candidate);
-            assignedIds.add(candidate.id);
-
-            if (candidate.stationId !== currentStation.id) {
-              transfers.push({
-                operationId: candidate.id,
-                operationName: candidate.name,
-                fromStationId: candidate.stationId,
-                toStationId: currentStation.id,
-                reason: 'Capacity surge: fast pace balancing to maximize hourly units',
-                durationSeconds: duration,
-              });
-              candidate.stationId = currentStation.id;
-            }
-            progress = true;
-            break;
-          }
-        }
-      }
-    }
-
-    // Ensure all operations are assigned
-    sortedOps.forEach((op) => {
-      if (!assignedIds.has(op.id)) {
-        const lastStation = sortedStations[sortedStations.length - 1] || sortedStations[0];
-        stationOps[lastStation.id].push(op);
-        assignedIds.add(op.id);
-        op.stationId = lastStation.id;
-      }
-    });
-
-    cloned.operations = Object.values(stationOps).flat();
     const metricsC = calculateLineBalancing(cloned);
 
     const assignmentsC: ScenarioWorkstationAssignment[] = sortedStations.map((ws) => {
-      const ops = stationOps[ws.id] || [];
-      const cycle = ops.reduce((acc, o) => acc + getOpTotalTime(o), 0);
+      const ops = cloned.operations.filter((o) => o.stationId === ws.id);
+      const cycle = metricsC.workstationMetrics.find((m) => m.id === ws.id)?.cycleTime || 0;
       return {
         stationId: ws.id,
         stationName: ws.name,
         operationIds: ops.map((o) => o.id),
         operatorIds: cloned.operators.filter((w) => w.assignedStationId === ws.id).map((w) => w.id),
         cycleTime: cycle,
-        workload: cycle,
-        operatorCount: ws.id === currentBottleneckStation ? 2 : 1,
+        workload: ops.reduce((acc, o) => acc + getOpTotalTime(o), 0),
+        operatorCount: ws.id === currentBottleneckStationId ? 2 : 1,
         isBottleneck: cycle >= metricsC.lineCycleTime,
       };
     });
 
-    const scenario: OptimizationScenario = {
-      id: 'scenario-c',
+    return {
+      id: 'scenario-c' as const,
       name: 'Scenario C: Maximum Capacity Surge / سيناريو ج: أقصى طاقة إنتاجية ومضاعفة المخرجات',
       title: 'Maximum Capacity Surge (Parallel Operations & Task Splitting)',
       description: 'Break bottleneck operations into parallel sub-tasks and add dual operator assignments to maximize total shift throughput.',
       objective: 'Maximize hourly output (units/hour) to satisfy peak seasonal customer orders or recover lost production volume.',
-      algorithmUsed: 'COMSOAL Heuristic',
+      algorithmUsed: 'COMSOAL Heuristic' as const,
       assignments: assignmentsC,
       transfers,
-      combinedOperations: combinedOps,
-      splitOperations: splitOps,
+      combinedOperations: [],
+      splitOperations: [],
       metrics: metricsC,
       advantages: [
         `Surges shift capacity to ${metricsC.shiftCapacity} units (vs ${currentResults.shiftCapacity} baseline)`,
@@ -560,11 +546,11 @@ export function generateOptimizationScenarios(line: ProductionLine): Optimizatio
         'Requires splitting operation tooling and work instructions',
       ],
       isFeasible: true,
-      engineeringJustification: `Deconstructed the critical-path bottleneck by splitting long cycle tasks and allocating dual operators. The lowered cycle time unlocks peak throughput, maximizing line productivity for high-demand spikes.`,
+      engineeringJustification: `Allocated parallel operators and balanced concurrent manual tasks on bottleneck station ${bottleneckStation?.name || currentBottleneckStationId}. This dropped station cycle time and surged throughput.`,
     };
-
-    return scenario;
   })();
 
   return [scenarioA, scenarioB, scenarioC];
 }
+
+export { generateOptimizationScenarios as runOptimizationSuite };
