@@ -1,0 +1,8 @@
+{
+  "name": "AI Production Line Balancer",
+  "description": "Industrial engineering calculation and AI optimization system for assembly lines, Yamazumi balancing, bottleneck identification, and operator allocation.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
