@@ -220,9 +220,21 @@ export const ScenarioComparisonView: React.FC = () => {
                 <h3 className="text-lg font-bold text-neutral-900 dark:text-white mt-2">
                   {selectedScenario.name}
                 </h3>
-                <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1 max-w-2xl">
+                <p className="text-xs text-neutral-600 dark:text-neutral-300 mt-2 max-w-3xl whitespace-pre-line leading-relaxed">
                   {selectedScenario.description}
                 </p>
+                {selectedScenario.objective && (
+                  <div className="mt-2 text-xs text-blue-700 dark:text-blue-300 font-medium whitespace-pre-line bg-blue-50/60 dark:bg-blue-950/30 p-2.5 rounded-xl border border-blue-200 dark:border-blue-900/40 max-w-3xl">
+                    <span className="font-bold">{language === 'ar' ? 'الهدف التشغيلي (Objective): ' : 'Engineering Objective: '}</span>
+                    {selectedScenario.objective}
+                  </div>
+                )}
+                {selectedScenario.unfeasibleReasons && selectedScenario.unfeasibleReasons.length > 0 && (
+                  <div className="mt-2 text-xs text-amber-700 dark:text-amber-300 font-medium whitespace-pre-line bg-amber-50/60 dark:bg-amber-950/30 p-2.5 rounded-xl border border-amber-200 dark:border-amber-900/40 max-w-3xl">
+                    <span className="font-bold">{language === 'ar' ? 'ملاحظة الجدوى الفنية: ' : 'Feasibility Notice: '}</span>
+                    {selectedScenario.unfeasibleReasons.join('\n')}
+                  </div>
+                )}
               </div>
 
               <button

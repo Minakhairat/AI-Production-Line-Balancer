@@ -282,28 +282,31 @@ export function generateOptimizationScenarios(
 
     return {
       id: 'scenario-a' as const,
-      name: 'Scenario A: Workload Leveling & Balancing / سيناريو أ: تسوية الأحمال وموازنة الخط',
-      title: 'Workload Leveling (Heijunka / RPW)',
-      description: 'Redistribute operations across existing stations using Ranked Positional Weight algorithm without adding or removing headcount.',
-      objective: 'Minimize balance delay and eliminate bottlenecks while preserving station count and current equipment.',
+      name: 'سيناريو أ: تسوية وتوزيع أحمال العمل | Scenario A: Workload Leveling & RPW',
+      title: 'تسوية الأحمال الحالية | Workload Leveling (RPW)',
+      description: 'إعادة توزيع العمليات بين محطات العمل الحالية باستخدام خوارزمية RPW (Helgeson-Birnie) دون تغيير عدد الفنيين أو المحطات، للقضاء على الاختناق وتحقيق أعلى كفاءة توازن.\n\nRedistribute operations across existing stations using Ranked Positional Weight algorithm without adding or removing headcount to eliminate bottlenecks and optimize balance.',
+      objective: 'تقليص نسبة الفاقد (Balance Delay) والقضاء على الاختناق مع الحفاظ التام على عدد المحطات والمعدات الحالية.\n\nMinimize balance delay and eliminate line bottlenecks while strictly preserving station count and current tooling.',
       algorithmUsed: 'Ranked Positional Weight (RPW)' as const,
       assignments: assignmentsA,
-      transfers: bestTransfers,
+      transfers: bestTransfers.map((tr) => ({
+        ...tr,
+        reason: `تسوية الحمل نحو المعدل النظري (${averageStationWork}ث) | Leveling: smooths station cycle toward theoretical optimum (${averageStationWork}s)`,
+      })),
       combinedOperations: [],
       splitOperations: [],
       metrics: metricsA,
       advantages: [
-        'Zero capital expenditure (CapEx) required / لا يتطلب أي استثمارات رأسمالية إضافية',
-        'Improves line balancing efficiency from ' + currentResults.lineEfficiency.toFixed(1) + '% to ' + metricsA.lineEfficiency.toFixed(1) + '%',
-        'Maintains existing workstation layout and operator team size',
-        'Eliminates major bottlenecks by moving unconstrained tasks downstream',
+        'صفر تكلفة استثمارية رأسمالية (Zero CapEx) - لا يتطلب شراء أي ماكينات أو معدات جديدة | Zero capital expenditure (CapEx) required',
+        `رفع كفاءة توازن الخط من ${currentResults.lineEfficiency.toFixed(1)}% إلى ${metricsA.lineEfficiency.toFixed(1)}% | Improves line balancing efficiency from ${currentResults.lineEfficiency.toFixed(1)}% to ${metricsA.lineEfficiency.toFixed(1)}%`,
+        'الحفاظ التام على مساحة الخط الحالية وحجم طاقم التشغيل | Maintains existing workstation layout and operator team size',
+        'القضاء على اختناق المحطة الحرجة بنقل العمليات المرنة للمحطات التالية | Eliminates critical bottleneck by moving unconstrained tasks downstream',
       ],
       disadvantages: [
-        'Requires cross-training operators on reallocated operations',
-        'Slight learning curve during the first week of implementation',
+        'يتطلب تدريباً تشغيلياً خفيفاً للمشغلين على العمليات المنقولة | Requires cross-training operators on reallocated operations',
+        'منحنى تعلم طفيف خلال الأسبوع الأول من التطبيق الميداني | Slight learning curve during the first week of implementation',
       ],
       isFeasible,
-      engineeringJustification: `Helgeson-Birnie RPW heuristic ordered tasks by cumulative downstream work content. Tasks were allocated sequentially into the ${sortedStations.length} available workstations up to the target cycle threshold, satisfying all topological precedence constraints.`,
+      engineeringJustification: `تم تطبيق خوارزمية Helgeson-Birnie (RPW) بترتيب العمليات وفقاً للوزن التراكمي للمسار الحرج اللاحق، ثم إسنادها تتابعياً للمحطات (${sortedStations.length} محطات) بما يحقق متطلبات شبكة الأسبقية الفيزيائية.\n\nHelgeson-Birnie RPW heuristic ordered tasks by cumulative downstream work content. Tasks were allocated sequentially into the ${sortedStations.length} available workstations up to the target cycle threshold, satisfying all topological precedence constraints.`,
     };
   })();
 
@@ -443,32 +446,35 @@ export function generateOptimizationScenarios(
 
     return {
       id: 'scenario-b' as const,
-      name: 'Scenario B: Lean Headcount & Workstation Consolidation / سيناريو ب: تقليص العمالة ودمج المحطات',
-      title: 'Lean Headcount Reduction (LCR / Consolidation)',
-      description: `Compress the assembly flow into ${targetStationCount} workstations (from ${currentCount}), liberating 1-2 operators for Kaizen or secondary lines.`,
-      objective: 'Maximize labor productivity and reduce direct labor cost per unit while meeting takt time.',
+      name: 'سيناريو ب: تقليص العمالة ودمج المحطات | Scenario B: Lean Headcount & Station Consolidation',
+      title: 'تقليص العمالة الرشيق | Lean Headcount (LCR)',
+      description: `ضغط تدفق التجميع في ${targetStationCount} محطات عمل بدلاً من ${currentCount} محطات، مما يوفر 1 إلى 2 مشغلين لتوجيههم لمشاريع كايزن أو خطوط إنتاج ثانوية.\n\nCompress the assembly flow into ${targetStationCount} workstations (from ${currentCount}), liberating 1-2 operators for Kaizen or secondary lines.`,
+      objective: 'تعظيم إنتاجية العامل الواحد وخفض تكلفة العمالة المباشرة للقطعة مع الحفاظ على تسليم طلب العميل وزمن التاكت.\n\nMaximize labor productivity and reduce direct labor cost per unit while meeting customer demand and takt time.',
       algorithmUsed: 'Largest Candidate Rule (LCR)' as const,
       assignments: assignmentsB,
-      transfers,
+      transfers: transfers.map((tr) => ({
+        ...tr,
+        reason: `دمج رشيق في المحطة ${tr.toStationId} لتقليص العمالة | Lean consolidation into station ${tr.toStationId}`,
+      })),
       combinedOperations: [],
       splitOperations: [],
       metrics: metricsB,
       advantages: [
-        `Reduces active workstations from ${currentCount} to ${targetStationCount}`,
-        'Saves direct labor hours and reduces floor space footprint (M2)',
-        'Significantly increases labor utilization for remaining operators',
+        `تقليص عدد محطات العمل النشطة من ${currentCount} إلى ${targetStationCount} محطات | Reduces active workstations from ${currentCount} to ${targetStationCount}`,
+        'توفير ساعات عمل مباشرة وخفض مساحة إشغال أرضية المصنع (M2) | Saves direct labor hours and reduces floor space footprint',
+        'رفع نسبة استغلال العمالة المتبقية إلى أعلى مستوى تشغيلي | Significantly increases labor utilization for remaining operators',
       ],
       disadvantages: [
-        'Higher cycle time closer to Takt limit, leaving smaller margin for unplanned micro-stops',
-        'Workstation layout compression required',
+        'اقتراب زمن دورة المحطات من حد التاكت يقلل هامش التسامح مع التوقفات الصغيرة | Higher cycle time closer to Takt limit, leaving smaller margin for micro-stops',
+        'يتطلب إعادة تخطيط وتكثيف موقع المحطات المدمجة | Workstation layout compression and tooling re-layout required',
       ],
       isFeasible,
       unfeasibleReasons: isFeasible
         ? undefined
         : [
-            `Line cycle time (${metricsB.lineCycleTime.toFixed(1)}s) exceeds target Takt Time (${targetTaktTime.toFixed(1)}s). Customer demand will fall short by ${Math.abs(metricsB.capacityBuffer)} units unless overtime is scheduled.`,
+            `زمن دورة الخط (${metricsB.lineCycleTime.toFixed(1)}ث) يتجاوز زمن التاكت المطلوب (${targetTaktTime.toFixed(1)}ث). سينخفض الإنتاج بمقدار ${Math.abs(metricsB.capacityBuffer)} وحدة ما لم يتم جدولة ساعات عمل إضافية.\n\nLine cycle time (${metricsB.lineCycleTime.toFixed(1)}s) exceeds target Takt Time (${targetTaktTime.toFixed(1)}s). Customer demand will fall short by ${Math.abs(metricsB.capacityBuffer)} units unless overtime is scheduled.`,
           ],
-      engineeringJustification: `Largest Candidate Rule prioritized high-work-content operations to maximize station packing density. Work content was consolidated into ${targetStationCount} stations, achieving a lean footprint matching theoretical minimum calculation.`,
+      engineeringJustification: `تم تطبيق قاعدة المرشح الأكبر (Largest Candidate Rule - LCR) بإعطاء الأولوية للعمليات ذات المحتوى الزمني الأطول لتعظيم كثافة الإسناد في كل محطة، مما مكن من دمج العمليات في ${targetStationCount} محطات ومطابقة الحد الأدنى النظري.\n\nLargest Candidate Rule prioritized high-work-content operations to maximize station packing density. Work content was consolidated into ${targetStationCount} stations, achieving a lean footprint matching theoretical minimum calculation.`,
     };
   })();
 
@@ -526,10 +532,10 @@ export function generateOptimizationScenarios(
 
     return {
       id: 'scenario-c' as const,
-      name: 'Scenario C: Maximum Capacity Surge / سيناريو ج: أقصى طاقة إنتاجية ومضاعفة المخرجات',
-      title: 'Maximum Capacity Surge (Parallel Operations & Task Splitting)',
-      description: 'Break bottleneck operations into parallel sub-tasks and add dual operator assignments to maximize total shift throughput.',
-      objective: 'Maximize hourly output (units/hour) to satisfy peak seasonal customer orders or recover lost production volume.',
+      name: 'سيناريو ج: تعظيم الطاقة الإنتاجية ومضاعفة المخرجات | Scenario C: Maximum Capacity Surge',
+      title: 'أقصى طاقة إنتاجية | Max Capacity Surge',
+      description: 'إلغاء أثر عنق الزجاجة بتشغيل فنيين متوازيين وتوزيع العمليات المزدوجة لتسريع وتيرة دورة الخط وتحقيق أقصى طاقة وردية ممكنة.\n\nEliminate bottleneck constraint by placing parallel operators and balancing concurrent tasks to maximize total shift throughput.',
+      objective: 'تعظيم الطاقة الإنتاجية بالساعة (Units/Hour) لتلبية طلبيات الذروة الموسمية أو تعويض فترات التوقف المفقودة.\n\nMaximize hourly output to satisfy peak seasonal customer orders or recover lost production capacity.',
       algorithmUsed: 'COMSOAL Heuristic' as const,
       assignments: assignmentsC,
       transfers,
@@ -537,16 +543,16 @@ export function generateOptimizationScenarios(
       splitOperations: [],
       metrics: metricsC,
       advantages: [
-        `Surges shift capacity to ${metricsC.shiftCapacity} units (vs ${currentResults.shiftCapacity} baseline)`,
-        `Increases hourly throughput to ${metricsC.hourlyCapacity.toFixed(1)} units/hr`,
-        'Creates healthy production buffer against line disruptions',
+        `قفزة في إنتاجية الوردية إلى ${metricsC.shiftCapacity} قطعة (مقارنة بـ ${currentResults.shiftCapacity} قطعة بالوضع الحالي) | Surges shift capacity to ${metricsC.shiftCapacity} units (vs ${currentResults.shiftCapacity} baseline)`,
+        `زيادة معدل الإخراج بالساعة إلى ${metricsC.hourlyCapacity.toFixed(1)} قطعة/ساعة | Increases hourly throughput to ${metricsC.hourlyCapacity.toFixed(1)} units/hr`,
+        'بناء هامش أمان إنتاجي قوي ضد أعطال ومفاجآت التشغيل | Creates healthy production buffer against line disruptions',
       ],
       disadvantages: [
-        'Requires 1 additional operator or dual-shift positioning on bottleneck station',
-        'Requires splitting operation tooling and work instructions',
+        'يتطلب إضافة فني إضافي واحد أو توزيع فني طوارئ على محطة الاختناق | Requires 1 additional operator or floating operator on bottleneck station',
+        'يتطلب توفير أدوات ومثبتات مكررة للعمليات المتوازية | Duplicate tooling and fixture equipment required for concurrent stations',
       ],
       isFeasible: true,
-      engineeringJustification: `Allocated parallel operators and balanced concurrent manual tasks on bottleneck station ${bottleneckStation?.name || currentBottleneckStationId}. This dropped station cycle time and surged throughput.`,
+      engineeringJustification: `تم تشغيل محطة الاختناق (${bottleneckStation?.name || currentBottleneckStationId}) بنظام المشغل المزدوج المتوازي، مما أدى لانخفاض زمن دورتها الفعلي إلى النصف ورفع سرعة الخط ككل.\n\nAllocated parallel operators and balanced concurrent manual tasks on bottleneck station ${bottleneckStation?.name || currentBottleneckStationId}. This cut station cycle time in half and surged overall line throughput.`,
     };
   })();
 

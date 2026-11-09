@@ -77,16 +77,24 @@ const LANG_STORAGE_KEY = 'ai_line_balancer_lang_v2';
 const THEME_STORAGE_KEY = 'ai_line_balancer_theme_v2';
 
 export const LineProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  // Load initial line
+  // Load initial line safely
   const [line, setLine] = useState<ProductionLine>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (parsed.workstations && parsed.operations) return parsed;
+        if (
+          parsed &&
+          Array.isArray(parsed.workstations) &&
+          parsed.workstations.length > 0 &&
+          Array.isArray(parsed.operations) &&
+          parsed.operations.length > 0
+        ) {
+          return parsed;
+        }
       }
     } catch (e) {
-      console.warn('Could not read saved line state, loading default', e);
+      console.warn('Could not read saved line state, loading default factory sample', e);
     }
     return SAMPLE_LINES[0];
   });
@@ -162,11 +170,25 @@ export const LineProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return getTranslation(language, key, fallback);
   };
 
-  // Calculate results dynamically
-  const results = useMemo(() => calculateLineBalancing(line), [line]);
+  // Calculate results dynamically with crash protection
+  const results = useMemo(() => {
+    try {
+      return calculateLineBalancing(line);
+    } catch (err) {
+      console.error('Calculation engine error, recovering safely:', err);
+      return calculateLineBalancing(SAMPLE_LINES[0]);
+    }
+  }, [line]);
 
-  // Calculate optimization scenarios
-  const scenarios = useMemo(() => generateOptimizationScenarios(line), [line]);
+  // Calculate optimization scenarios with crash protection
+  const scenarios = useMemo(() => {
+    try {
+      return generateOptimizationScenarios(line, results);
+    } catch (err) {
+      console.error('Optimization engine error, recovering safely:', err);
+      return generateOptimizationScenarios(SAMPLE_LINES[0], results);
+    }
+  }, [line, results]);
 
   // CRUD handlers
   const updateLine = (updated: Partial<ProductionLine>) => {

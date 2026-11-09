@@ -117,10 +117,6 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
             {theme === 'dark' ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-neutral-600" />}
           </button>
 
-          {/* Engineer Tag */}
-          <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-900/60 text-[11px] font-semibold">
-            <span>{language === 'ar' ? 'م/ مينا خيرت' : 'Eng. Mina Khairat'}</span>
-          </div>
 
           {/* AI Assistant Button */}
           <button

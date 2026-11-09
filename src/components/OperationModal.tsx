@@ -26,7 +26,6 @@ export const OperationModal: React.FC = () => {
   const [handlingTime, setHandlingTime] = useState<number>(3);
   const [operatorCount, setOperatorCount] = useState<number>(1);
   const [precedenceIds, setPrecedenceIds] = useState<string[]>([]);
-  const [requiredSkills, setRequiredSkills] = useState<string>('');
   const [type, setType] = useState<OperationType>('manual');
   const [canBeSplit, setCanBeSplit] = useState<boolean>(false);
   const [canBeCombined, setCanBeCombined] = useState<boolean>(false);
@@ -46,7 +45,6 @@ export const OperationModal: React.FC = () => {
       setHandlingTime(editingOperation.handlingTime || 0);
       setOperatorCount(editingOperation.operatorCount || 1);
       setPrecedenceIds(editingOperation.precedenceIds || []);
-      setRequiredSkills((editingOperation.requiredSkills || []).join(', '));
       setType(editingOperation.type);
       setCanBeSplit(editingOperation.canBeSplit);
       setCanBeCombined(editingOperation.canBeCombined);
@@ -65,7 +63,6 @@ export const OperationModal: React.FC = () => {
       setHandlingTime(3);
       setOperatorCount(1);
       setPrecedenceIds([]);
-      setRequiredSkills('Mechanical Assembly');
       setType('manual');
       setCanBeSplit(false);
       setCanBeCombined(false);
@@ -78,11 +75,6 @@ export const OperationModal: React.FC = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const skillsArr = requiredSkills
-      .split(',')
-      .map((s) => s.trim())
-      .filter(Boolean);
-
     const opData: Operation = {
       id,
       name,
@@ -95,7 +87,7 @@ export const OperationModal: React.FC = () => {
       handlingTime: Number(handlingTime),
       operatorCount: Number(operatorCount),
       precedenceIds,
-      requiredSkills: skillsArr,
+      requiredSkills: editingOperation?.requiredSkills || [],
       type,
       canBeSplit,
       canBeCombined,
@@ -383,32 +375,18 @@ export const OperationModal: React.FC = () => {
             </div>
           </div>
 
-          {/* Required Skills & Notes */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block text-neutral-600 dark:text-neutral-400 mb-1 font-medium">
-                {language === 'ar' ? 'المهارات المطلوبة (مفصولة بفواصل)' : 'Required Skills'}
-              </label>
-              <input
-                type="text"
-                value={requiredSkills}
-                onChange={(e) => setRequiredSkills(e.target.value)}
-                placeholder="Wiring, Torque, Testing"
-                className="w-full px-3 py-2 rounded-xl bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-white"
-              />
-            </div>
-
-            <div>
-              <label className="block text-neutral-600 dark:text-neutral-400 mb-1 font-medium">
-                {language === 'ar' ? 'ملاحظات هندسية' : 'Notes'}
-              </label>
-              <input
-                type="text"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-white"
-              />
-            </div>
+          {/* Engineering & Quality Notes */}
+          <div>
+            <label className="block text-neutral-600 dark:text-neutral-400 mb-1 font-medium">
+              {language === 'ar' ? 'ملاحظات هندسية ومعايير الجودة (Engineering & Quality Notes)' : 'Engineering & Quality Notes'}
+            </label>
+            <input
+              type="text"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder={language === 'ar' ? 'مثال: التأكد من سلامة العوازل وتطابق معايير الجودة' : 'e.g. Verify insulation alignment and torque specs'}
+              className="w-full px-3 py-2 rounded-xl bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-white"
+            />
           </div>
 
           {/* Form Actions */}

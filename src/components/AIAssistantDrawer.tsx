@@ -144,7 +144,7 @@ How can I assist you in optimizing cycle times or reducing waste?`,
       if (!replyText) {
         replyText =
           language === 'ar'
-            ? `[تحليل المستشار الهندسي الذكي - إشراف م/ مينا خيرت]:
+            ? `[تحليل المستشار الهندسي الذكي]:
 بناءً على حسابات خط الإنتاج (${line.name}):
 • زمن التاكت المطلوب: ${results.taktTime.toFixed(1)} ثانية/قطعة.
 • زمن دورة الخط الفعلي (عنق الزجاجة): ${results.lineCycleTime.toFixed(1)} ثانية بالمحطة (${results.bottlenecks.join(', ')}).
@@ -155,7 +155,7 @@ How can I assist you in optimizing cycle times or reducing waste?`,
 1. إعادة توزيع العمليات المرنة من محطة عنق الزجاجة إلى المحطات التالية ذات نسبة الاستغلال المنخفضة (سيناريو أ - RPW).
 2. دراسة دمج العمليات اليدوية المتتالية أو تجزئة العمليات الطويلة المسموح بتجزئتها لخفض المسار الحرج.
 3. تقليص أوقات المشي والمناولة بتطبيق مبادئ 5S وترتيب موقع العمل.`
-            : `[AI Engineering Analysis - Supervised by Eng. Mina Khairat]:
+            : `[AI Industrial Engineering Analysis]:
 Based on line calculations for (${line.name}):
 • Target Takt Time: ${results.taktTime.toFixed(1)}s/unit
 • Line Cycle Time: ${results.lineCycleTime.toFixed(1)}s (Paced by Station: ${results.bottlenecks.join(', ')})
@@ -178,7 +178,7 @@ Recommended Kaizen Actions:
     } catch (err: any) {
       const fallbackText =
         language === 'ar'
-          ? `[تحليل المستشار الهندسي الذكي - إشراف م/ مينا خيرت]:
+          ? `[تحليل المستشار الهندسي الذكي]:
 بناءً على حسابات خط الإنتاج (${line.name}):
 • زمن التاكت المطلوب: ${results.taktTime.toFixed(1)} ثانية.
 • زمن دورة الخط (عنق الزجاجة): ${results.lineCycleTime.toFixed(1)} ثانية.
@@ -186,7 +186,7 @@ Recommended Kaizen Actions:
 توصية مهندس النظم الصناعية:
 1. تطبيق سيناريو أ (تسوية الأحمال) لنقل العمليات غير المقيدة من محطة الاختناق.
 2. تقليص أوقات المناولة والمشي المهدورة.`
-          : `[AI Engineering Analysis - Supervised by Eng. Mina Khairat]:
+          : `[AI Industrial Engineering Analysis]:
 Based on line calculations for (${line.name}):
 • Target Takt Time: ${results.taktTime.toFixed(1)}s
 • Line Cycle Time: ${results.lineCycleTime.toFixed(1)}s

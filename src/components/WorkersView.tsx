@@ -6,7 +6,6 @@ import {
   Plus,
   Trash2,
   Edit2,
-  Award,
   Layers,
   Activity,
   CheckCircle2,
@@ -23,14 +22,12 @@ export const WorkersView: React.FC = () => {
   const [formName, setFormName] = useState<string>('');
   const [formShift, setFormShift] = useState<string>('Shift 1');
   const [formStationId, setFormStationId] = useState<string>('ws-1');
-  const [formSkills, setFormSkills] = useState<string>('');
 
   const openAddModal = () => {
     setEditingWorker(null);
     setFormName(`Operator ${line.operators.length + 1}`);
     setFormShift('Shift 1');
     setFormStationId(line.workstations[0]?.id || 'ws-1');
-    setFormSkills('Assembly:4, Torque Fastening:3');
     setIsModalOpen(true);
   };
 
@@ -39,33 +36,17 @@ export const WorkersView: React.FC = () => {
     setFormName(worker.name);
     setFormShift(worker.shift);
     setFormStationId(worker.assignedStationId || line.workstations[0]?.id || 'ws-1');
-    setFormSkills(
-      (worker.skills || []).map((s) => `${s.skill}:${s.level}`).join(', ')
-    );
     setIsModalOpen(true);
   };
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
-    const skillsArr = formSkills
-      .split(',')
-      .map((s) => s.trim())
-      .filter(Boolean)
-      .map((pair) => {
-        const [skill, levelStr] = pair.split(':').map((p) => p.trim());
-        return {
-          skill: skill || 'General',
-          level: Math.min(5, Math.max(1, parseInt(levelStr || '3') || 3)),
-        };
-      });
-
     if (editingWorker) {
       updateOperator({
         ...editingWorker,
         name: formName,
         shift: formShift,
         assignedStationId: formStationId,
-        skills: skillsArr,
       });
     } else {
       const newId = `op-${Date.now().toString().slice(-4)}`;
@@ -74,7 +55,7 @@ export const WorkersView: React.FC = () => {
         name: formName,
         shift: formShift,
         assignedStationId: formStationId,
-        skills: skillsArr,
+        skills: [],
       });
     }
     setIsModalOpen(false);
@@ -87,12 +68,12 @@ export const WorkersView: React.FC = () => {
         <div>
           <h2 className="text-base font-bold text-neutral-900 dark:text-white flex items-center gap-2">
             <Users className="w-5 h-5 text-blue-500" />
-            <span>{language === 'ar' ? 'إدارة الفنيين ومصفوفة المهارات (Workers & Skill Matrix)' : 'Operator Roster & Skills Competency Matrix'}</span>
+            <span>{language === 'ar' ? 'إدارة الفنيين والمشغلين (Operators & Workforce)' : 'Operator Roster & Workforce Allocation'}</span>
           </h2>
           <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
             {language === 'ar'
-              ? 'متابعة توزيع العمالة ومستوى كفاءة المشغلين ونسب الاستغلال وملاءمة المهارات للعمليات'
-              : 'Direct labor tracking, shift allocation, individual workload utilization, and cross-training levels'}
+              ? 'متابعة توزيع المشغلين على المحطات، الوردية، وأوقات العمل الفعلية ونسب الاستغلال'
+              : 'Direct labor tracking, shift allocation, assigned workstations, and individual workload utilization'}
           </p>
         </div>
 
@@ -181,35 +162,19 @@ export const WorkersView: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Skills Matrix */}
-                <div className="mt-4 space-y-2">
-                  <span className="text-xs font-semibold text-neutral-500 block">
-                    {language === 'ar' ? 'مصفوفة المهارات ومستوى الكفاءة:' : 'Skills Competency Matrix:'}
-                  </span>
-                  <div className="space-y-1.5">
-                    {(worker.skills || []).map((sk, idx) => (
-                      <div
-                        key={idx}
-                        className="flex items-center justify-between text-xs p-1.5 rounded-lg bg-neutral-100/70 dark:bg-neutral-800/40"
-                      >
-                        <span className="text-neutral-700 dark:text-neutral-300 flex items-center gap-1.5">
-                          <Award className="w-3 h-3 text-amber-500" />
-                          {sk.skill}
-                        </span>
-                        <div className="flex gap-0.5">
-                          {[1, 2, 3, 4, 5].map((lvl) => (
-                            <span
-                              key={lvl}
-                              className={`w-2 h-2 rounded-full ${
-                                lvl <= sk.level
-                                  ? 'bg-amber-400'
-                                  : 'bg-neutral-300 dark:bg-neutral-700'
-                              }`}
-                            />
-                          ))}
-                        </div>
-                      </div>
-                    ))}
+                {/* Operational Allocation Details */}
+                <div className="mt-4 p-3 rounded-xl bg-neutral-100/70 dark:bg-neutral-800/40 text-xs space-y-1.5">
+                  <div className="flex justify-between text-neutral-500">
+                    <span>{language === 'ar' ? 'حالة المشغل:' : 'Operator Status:'}</span>
+                    <span className="font-semibold text-emerald-600 dark:text-emerald-400">
+                      {language === 'ar' ? 'نشط على الخط' : 'Active on Line'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-neutral-500">
+                    <span>{language === 'ar' ? 'نظام العمل:' : 'Work Mode:'}</span>
+                    <span className="font-mono text-neutral-700 dark:text-neutral-300">
+                      {language === 'ar' ? 'تشغيل تجميع قياسي' : 'Standard Assembly'}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -271,19 +236,6 @@ export const WorkersView: React.FC = () => {
                     ))}
                   </select>
                 </div>
-              </div>
-
-              <div>
-                <label className="block text-neutral-600 dark:text-neutral-400 mb-1 font-medium">
-                  {t('skillsWithLevels')}
-                </label>
-                <input
-                  type="text"
-                  value={formSkills}
-                  onChange={(e) => setFormSkills(e.target.value)}
-                  placeholder="Assembly:4, Torque:3, Wiring:5"
-                  className="w-full px-3 py-2 rounded-xl bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-white"
-                />
               </div>
 
               <div className="flex items-center justify-end gap-2 pt-3 border-t border-neutral-100 dark:border-neutral-800">

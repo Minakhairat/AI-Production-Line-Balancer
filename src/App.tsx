@@ -14,6 +14,7 @@ import { ReportView } from './components/ReportView';
 import { SettingsView } from './components/SettingsView';
 import { OperationModal } from './components/OperationModal';
 import { AIAssistantDrawer } from './components/AIAssistantDrawer';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 const MainAppLayout: React.FC = () => {
   const { activeTab, language } = useLineBalancing();
@@ -82,8 +83,10 @@ const MainAppLayout: React.FC = () => {
 
 export default function App() {
   return (
-    <LineProvider>
-      <MainAppLayout />
-    </LineProvider>
+    <ErrorBoundary>
+      <LineProvider>
+        <MainAppLayout />
+      </LineProvider>
+    </ErrorBoundary>
   );
 }

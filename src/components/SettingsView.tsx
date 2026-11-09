@@ -178,40 +178,42 @@ export const SettingsView: React.FC = () => {
         </div>
       </div>
 
-      {/* Developer & Copyright Info */}
+      {/* System Specifications & Release Info */}
       <div className="p-6 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl space-y-4">
         <h3 className="font-bold text-sm text-neutral-900 dark:text-neutral-100 border-b border-neutral-200 dark:border-neutral-800 pb-3 flex items-center justify-between">
           <span className="flex items-center gap-2">
             <ShieldCheck className="w-4 h-4 text-blue-500" />
-            <span>{language === 'ar' ? 'حقوق الملكية الفكرية وتطوير النظام' : 'System Development & Copyright'}</span>
+            <span>{language === 'ar' ? 'معلومات المنظومة والترخيص' : 'System Information & Specifications'}</span>
           </span>
           <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-blue-500/10 text-blue-500 font-bold">
-            All Rights Reserved © 2026
+            IE 4.0 Suite v2.4
           </span>
         </h3>
 
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl bg-blue-50/40 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900/50">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 rounded-xl bg-neutral-50 dark:bg-neutral-950/60 border border-neutral-100 dark:border-neutral-800 text-xs">
           <div>
-            <div className="text-xs text-neutral-500 mb-0.5">
-              {language === 'ar' ? 'مهندس النظم ومصمم النظام:' : 'Lead Industrial Engineer & Developer:'}
+            <div className="text-neutral-500 mb-0.5 font-medium">
+              {language === 'ar' ? 'المحرك الهندسي والتحسين الرياضي:' : 'Engineering Calculation & Optimization Engine:'}
             </div>
-            <div className="text-base font-bold text-neutral-900 dark:text-white">
-              {language === 'ar' ? 'المهندس مينا خيرت' : 'Eng. Mina Khairat'}
+            <div className="font-semibold text-neutral-900 dark:text-white">
+              AI Production Line Balancer Engine
             </div>
-            <div className="text-xs text-neutral-500 mt-1 font-mono flex flex-wrap items-center gap-3">
-              <span className="text-blue-600 dark:text-blue-400 font-bold">
-                📱 {language === 'ar' ? 'الموبايل:' : 'Mobile:'} 01200224513
-              </span>
-              <span>✉️ minakhairat1@gmail.com</span>
+            <div className="text-[11px] text-neutral-400 mt-1">
+              {language === 'ar'
+                ? 'متوافق مع معايير الهندسة الصناعية (Helgeson-Birnie RPW, LCR, Heuristics)'
+                : 'Compliant with IE Standards (RPW, LCR, and Heuristic Line Balancing)'}
             </div>
           </div>
 
-          <div className="text-xs text-neutral-600 dark:text-neutral-400 sm:text-right">
-            <div className="font-semibold text-neutral-800 dark:text-neutral-200">
-              AI Production Line Balancer
+          <div className="sm:text-right">
+            <div className="text-neutral-500 mb-0.5 font-medium">
+              {language === 'ar' ? 'نمط النشر والتشغيل:' : 'Deployment Environment:'}
             </div>
-            <div className="text-[11px] text-neutral-500">
-              {language === 'ar' ? 'نظام محاكاة وموازنة خطوط التجميع الصناعية' : 'Operations Research & Assembly Line Optimization'}
+            <div className="font-mono text-neutral-900 dark:text-white">
+              GitHub Pages / Cloud Ready
+            </div>
+            <div className="text-[11px] text-neutral-400 mt-1">
+              {language === 'ar' ? 'تشغيل ذاتي بالكامل وتصدير Excel/CSV و PDF' : 'Fully Standalone Client-Side Execution with Excel/CSV & PDF Export'}
             </div>
           </div>
         </div>

@@ -212,10 +212,10 @@ export const ReportView: React.FC = () => {
             <div className="text-neutral-500 mb-6">{t('signoffEngineer')}</div>
             <div className="border-b border-neutral-400 w-56 mb-1" />
             <div className="font-bold text-neutral-900 dark:text-white">
-              {language === 'ar' ? 'المهندس مينا خيرت' : 'Eng. Mina Khairat'}
+              {language === 'ar' ? 'مهندس العمليات الصناعية المسؤول' : 'Lead Industrial Engineer'}
             </div>
             <div className="font-mono text-neutral-500 text-[11px]">
-              {language === 'ar' ? 'موبايل: 01200224513' : 'Tel: +20 1200224513'} | Lead IE Engineer
+              {language === 'ar' ? 'اعتماد التوازن والجاهزية الفنية' : 'Industrial Engineering & Operations Research'}
             </div>
           </div>
           <div>

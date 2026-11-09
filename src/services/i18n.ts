@@ -23,7 +23,7 @@ export const dictionary: Record<Language, Translations> = {
     productionLines: 'إدارة خطوط الإنتاج (Production Lines)',
     timeStudy: 'دراسة الوقت والحركة (Time Study)',
     operationsManagement: 'محطات العمل والعمليات (Workstations)',
-    workersManagement: 'الفنيون ومصفوفة المهارات (Workers & Skills)',
+    workersManagement: 'إدارة الفنيين والمشغلين (Operators & Workforce)',
     lineBalancing: 'مخطط يامازومي للتوازن (Yamazumi Chart)',
     aiOptimization: 'محرك التحسين والسيناريوهات (AI Optimization)',
     scenarioComparison: 'مقارنة السيناريوهات (Scenario Matrix)',
@@ -112,8 +112,8 @@ export const dictionary: Record<Language, Translations> = {
     noOperationsFound: 'لا توجد عمليات تطابق معايير البحث المحددة.',
 
     // Workers Management
-    workersTitle: 'إدارة الفنيين ومصفوفة الجدارات والمهارات (Workforce & Skill Matrix)',
-    workersSubtitle: 'توزيع المشغلين على المحطات، نسب الاستغلال، والقدرات التشغيلية المعتمدة',
+    workersTitle: 'إدارة الفنيين والعمالة التشغيلية (Operators & Workforce)',
+    workersSubtitle: 'توزيع المشغلين على المحطات، الوردية، وأوقات العمل الفعلية ونسب الاستغلال',
     addWorker: 'إضافة فني تشغيل جديد',
     editWorker: 'تعديل ملف الفني',
     operatorId: 'رمز المشغل (Operator ID)',
@@ -228,7 +228,7 @@ export const dictionary: Record<Language, Translations> = {
     productionLines: 'Production Lines',
     timeStudy: 'Time Study',
     operationsManagement: 'Workstations & Operations',
-    workersManagement: 'Workers & Skill Matrix',
+    workersManagement: 'Operators & Workforce',
     lineBalancing: 'Yamazumi Chart & Balance',
     aiOptimization: 'AI Optimization Scenarios',
     scenarioComparison: 'Scenario Comparison Matrix',
@@ -317,8 +317,8 @@ export const dictionary: Record<Language, Translations> = {
     noOperationsFound: 'No operations match the selected criteria.',
 
     // Workers Management
-    workersTitle: 'Manpower Allocation & Operator Skill Matrix',
-    workersSubtitle: 'Manage worker station assignments, utilization rates, and operational capabilities',
+    workersTitle: 'Operator Allocation & Workforce Management',
+    workersSubtitle: 'Manage worker station assignments, shift allocations, and active cycle utilization',
     addWorker: 'Add Production Operator',
     editWorker: 'Edit Operator Profile',
     operatorId: 'Operator ID',
