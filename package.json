@@ -2,6 +2,7 @@
   "name": "ai-production-line-balancer",
   "private": true,
   "version": "1.0.0",
+  "author": "Eng. Mina Khairat (Tel: 01200224513) <minakhairat1@gmail.com>",
   "type": "module",
   "scripts": {
     "dev": "tsx server.ts",

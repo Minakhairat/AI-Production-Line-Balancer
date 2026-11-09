@@ -45,6 +45,30 @@ const MainAppLayout: React.FC = () => {
             {activeTab === 'lines' && <ProductionLinesView />}
             {activeTab === 'report' && <ReportView />}
             {activeTab === 'settings' && <SettingsView />}
+
+            {/* Bottom Copyright Footer */}
+            <footer className="pt-8 pb-4 mt-8 border-t border-neutral-200 dark:border-neutral-800/80 text-xs text-neutral-500 flex flex-col sm:flex-row items-center justify-between gap-3 print:hidden">
+              <div className="flex items-center gap-2">
+                <span className="font-semibold text-neutral-700 dark:text-neutral-300">
+                  {language === 'ar' ? 'تصميم وتطوير:' : 'Designed & Developed by:'}
+                </span>
+                <span className="font-bold text-blue-600 dark:text-blue-400">
+                  {language === 'ar' ? 'المهندس مينا خيرت' : 'Eng. Mina Khairat'}
+                </span>
+                <span className="hidden sm:inline text-neutral-400">|</span>
+                <a
+                  href="tel:01200224513"
+                  className="font-mono text-neutral-600 dark:text-neutral-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                >
+                  📱 01200224513
+                </a>
+              </div>
+              <div className="text-[11px] text-neutral-400 font-mono">
+                {language === 'ar'
+                  ? 'جميع الحقوق محفوظة © 2026 - نظام موازنة خطوط الإنتاج والتحسين بالذكاء الاصطناعي'
+                  : 'All Rights Reserved © 2026 | AI Production Line Balancer'}
+              </div>
+            </footer>
           </div>
         </main>
       </div>

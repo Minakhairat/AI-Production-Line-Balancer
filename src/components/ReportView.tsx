@@ -207,15 +207,20 @@ export const ReportView: React.FC = () => {
         </div>
 
         {/* Sign-off Blocks */}
-        <div className="pt-8 border-t border-neutral-200 dark:border-neutral-800 grid grid-cols-2 gap-8 text-xs">
+        <div className="pt-8 border-t border-neutral-200 dark:border-neutral-800 grid grid-cols-1 sm:grid-cols-2 gap-8 text-xs">
           <div>
-            <div className="text-neutral-500 mb-8">{t('signoffEngineer')}</div>
-            <div className="border-b border-neutral-400 w-48 mb-1" />
-            <div className="font-mono text-neutral-400">Lead IE Engineer, PE / Lean Six Sigma Black Belt</div>
+            <div className="text-neutral-500 mb-6">{t('signoffEngineer')}</div>
+            <div className="border-b border-neutral-400 w-56 mb-1" />
+            <div className="font-bold text-neutral-900 dark:text-white">
+              {language === 'ar' ? 'المهندس مينا خيرت' : 'Eng. Mina Khairat'}
+            </div>
+            <div className="font-mono text-neutral-500 text-[11px]">
+              {language === 'ar' ? 'موبايل: 01200224513' : 'Tel: +20 1200224513'} | Lead IE Engineer
+            </div>
           </div>
           <div>
-            <div className="text-neutral-500 mb-8">{t('signoffDirector')}</div>
-            <div className="border-b border-neutral-400 w-48 mb-1" />
+            <div className="text-neutral-500 mb-6">{t('signoffDirector')}</div>
+            <div className="border-b border-neutral-400 w-56 mb-1" />
             <div className="font-mono text-neutral-400">Operations & Plant Manufacturing Director</div>
           </div>
         </div>

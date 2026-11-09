@@ -1,210 +1,131 @@
 # AI Production Line Balancer | نظام موازنة خطوط الإنتاج والتحسين بالذكاء الاصطناعي
 
+> **تصميم وبرمجة وتطوير:** المهندس مينا خيرت (Eng. Mina Khairat)  
+> **رقم الموبايل / واتساب:** 01200224513 (+20 1200224513)  
+> **البريد الإلكتروني:** minakhairat1@gmail.com  
+> **حقوق الملكية الفكرية:** جميع الحقوق محفوظة © 2026
+
 [![React 19](https://img.shields.io/badge/React-19.0-61DAFB?logo=react&logoColor=black)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Vite](https://img.shields.io/badge/Vite-6.x-646CFF?logo=vite&logoColor=white)](https://vitejs.dev/)
 [![Tailwind CSS v4](https://img.shields.io/badge/Tailwind_CSS-v4-38B2AC?logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
 [![Express](https://img.shields.io/badge/Express-4.x-000000?logo=express&logoColor=white)](https://expressjs.com/)
 [![Gemini 3.8 Flash](https://img.shields.io/badge/Gemini_API-3.8_Flash-4285F4?logo=google&logoColor=white)](https://ai.google.dev/)
-[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
+[![GitHub Pages](https://img.shields.io/badge/Deploy-GitHub_Pages-222222?logo=github&logoColor=white)](https://pages.github.com/)
+[![Vercel](https://img.shields.io/badge/Deploy-Vercel-000000?logo=vercel&logoColor=white)](https://vercel.com/)
 
-An industrial engineering software suite and operations research optimization platform designed for manufacturing engineers, plant managers, and assembly line supervisors. It analyzes assembly line workloads, calculates deterministic line balancing metrics, detects critical bottlenecks, evaluates operator utilization, and computes mathematically validated balancing scenarios (RPW, LCR, Heuristics).
-
-نظام هندسي متكامل ومتقدم لموازنة خطوط التجميع والإنتاج الصناعي وحساب زمن التاكت، كفاءة الخط، ونسب الفاقد، مع محرك تحسين رياضي مبني على بحوث العمليات وخوارزميات (RPW & LCR) ومساعد ذكاء اصطناعي خبير في الهندسة الصناعية.
+نظام هندسي صناعي متكامل ومتقدم لموازنة خطوط التجميع والإنتاج الصناعي، حساب زمن التاكت، كفاءة الخط، ونسب الفاقد، مع محرك تحسين رياضي مبني على بحوث العمليات وخوارزميات (RPW & LCR) ومساعد ذكاء اصطناعي خبير في الهندسة الصناعية.
 
 ---
 
-## 🌟 Key Features | أهم المميزات
+## 🌐 كيفية نشر الموقع أونلاين مجاناً عبر جيت هاب (How to Deploy Online via GitHub)
 
-### 1. Interactive Yamazumi Balance Chart (مخطط يامازومي التفاعلي)
-- High-fidelity stacked bar visualization for every workstation.
-- 7 color-coded operational categories:
-  - 🔵 **Manual Work** (عمل يدوي)
-  - 🟣 **Machine Cycle** (تشغيل ماكينة)
-  - 🟠 **Material Handling** (مناولة وتداول)
-  - 🟢 **Operator Walking** (حركة ومشية الفني)
-  - 🟩 **Quality Inspection** (فحص ومراقبة الجودة)
-  - 🔴 **Packaging** (تغليف وتعبئة)
-  - ⚪ **Automated Cycle** (دورة مؤتمتة)
-- Reference horizontal lines for **Target Takt Time** and **Actual Line Cycle Time**.
-- Visual glowing alerts for overloaded bottlenecks ($CT > T_{takt}$) and underutilized stations.
-- Side inspector panel displaying detailed operational breakdowns with instant editing capability.
+المشروع مجهز بالكامل بملفات النشر التلقائي (`.github/workflows/deploy.yml` و `vercel.json` و `netlify.toml`). يمكنك نشره وجعله متاحاً أونلاين على الإنترنت بأحد الطرق التالية:
 
-### 2. Deterministic Industrial Engineering Calculation Engine (المحرك الحسابي الهندسي)
-Located at `src/utils/engineeringCalculationEngine.ts`:
-- **Takt Time**:
-  $$T_{takt} = \frac{\text{Net Available Production Time}}{\text{Customer Demand}}$$
-- **Workstation Workload & Cycle Time**:
-  Calculates single and parallel operator workloads, critical path, and concurrent machine cycles.
-- **Line Balancing Efficiency**:
-  $$E = \frac{\sum t_i}{N \times CT_{line}} \times 100\%$$
-- **Balance Delay**:
+---
+
+### الطريقة الأولى: النشر التلقائي عبر GitHub Pages (مجاناً 100%)
+
+1. **ارفع الكود إلى مستودعك على GitHub:**
+   ```bash
+   git add .
+   git commit -m "feat: release AI Production Line Balancer"
+   git branch -M main
+   git remote add origin https://github.com/YOUR_USERNAME/YOUR_REPO_NAME.git
+   git push -u origin main
+   ```
+
+2. **تفعيل النشر التلقائي من إعدادات المستودع على GitHub:**
+   - ادخل على صفحة المستودع في GitHub.
+   - اضغط على **Settings** في التبويبات العلوية.
+   - من القائمة الجانبية اليسرى اختر **Pages**.
+   - تحت قسم **Build and deployment**:
+     - في خانة **Source** اختر: **`GitHub Actions`**.
+   - بمجرد اختيارها، سيبدأ ملف العمل المبرمج مسبقاً (`.github/workflows/deploy.yml`) في بناء الموقع ورفعه تلقائياً.
+   - خلال دقيقة واحدة ستجد رابط موقعك المباشر في نفس الصفحة:
+     `https://YOUR_USERNAME.github.io/YOUR_REPO_NAME/`
+
+---
+
+### الطريقة الثانية: النشر الفوري بنقرة واحدة عبر Vercel (أسرع وأسهل رابط مباشر)
+
+1. سجل الدخول إلى موقع **[Vercel.com](https://vercel.com)** باستخدام حساب GitHub الخاص بك.
+2. اضغط على **Add New Project**.
+3. اختر مستودع المشروع من القائمة (Import).
+4. اضغط زر **Deploy** مباشرة (المشروع يحتوي بالفعل على `vercel.json` المعد تلقائياً).
+5. خلال 30 ثانية ستحصل على رابط حي وسريع جداً مع شهادة أمان مجانية (SSL):
+   `https://ai-production-line-balancer.vercel.app`
+
+---
+
+## 🌟 أهم إمكانيات ومميزات النظام (Core Features)
+
+### 1. مخطط يامازومي التفاعلي (Interactive Yamazumi Balance Chart)
+- عرض بياني متراكم لكل محطة عمل يوضح توزيع أزمنة العمليات بالثواني.
+- تقسيم العمليات إلى 7 فئات لونية معتمدة هندسياً:
+  - 🔵 **عمل يدوي (Manual Work)**
+  - 🟣 **تشغيل ماكينة (Machine Cycle)**
+  - 🟠 **مناولة وتداول (Material Handling)**
+  - 🟢 **حركة ومشية الفني (Operator Walking)**
+  - 🟩 **فحص ومراقبة جودة (Quality Inspection)**
+  - 🔴 **تغليف وتعبئة (Packaging)**
+  - ⚪ **دورة مؤتمتة بالكامل (Automated)**
+- خطوط مرجعية أفقية لزمن التاكت المستهدف وزمن دورة الخط الفعلي (عنق الزجاجة).
+- لوحة فحص جانبية لمعاينة وتعديل أزمنة أي عملية بنقرة واحدة.
+
+### 2. المحرك الحسابي الهندسي الدقيق (`src/utils/engineeringCalculationEngine.ts`)
+- **زمن التاكت (Takt Time):**
+  $$T_{takt} = \frac{\text{صافي وقت الإنتاج المتاح بالثواني}}{\text{طلب العميل المطلوب بالوحدات}}$$
+- **حساب أحمال محطات العمل والعمالة المتوازية (Parallel Operators):**
+  تقسيم أحمال المشغلين المتعددين داخل نفس المحطة بخوارزمية LPT ومراعاة التتابع.
+- **كفاءة توازن الخط (Line Efficiency):**
+  $$E = \frac{\sum t_i}{N_{stations} \times CT_{line}} \times 100\%$$
+- **نسبة الفاقد والتشتت (Balance Delay):**
   $$BD = 100\% - E$$
-- **Theoretical Minimum Workstations & Operators**:
-  $$N_{\min} = \left\lceil \frac{\text{Total Work Content}}{T_{takt}} \right\rceil$$
-- **Smoothness Index (SI)**:
-  $$SI = \sqrt{\sum (CT_{\max} - CT_i)^2}$$
-- **Capacity Estimation**:
-  Hourly and shift-based throughput calibrated with OEE (Overall Equipment Effectiveness).
+- **الحد الأدنى النظري للمحطات:**
+  $$N_{\min} = \left\lceil \frac{\text{إجمالي محتوى العمل}}{T_{takt}} \right\rceil$$
+- **مؤشر النعومة وتناسق الأحمال (Smoothness Index):**
+  $$SI = \sqrt{\sum (CT_{line} - CT_s)^2}$$
+- **الطاقة الإنتاجية:** حساب الطاقة الفعلية بالساعة والوردية بمعامل فاعلية المعدات (OEE).
 
-### 3. Operations Research Optimization Engine (محرك التحسين الرياضي)
-Generates 3 feasible, constraint-validated scenarios:
-- **Scenario A: Workload Leveling (Helgeson-Birnie RPW)**
-  Rebalances operations across existing workstations without capital expenditure or adding headcount.
-- **Scenario B: Lean Headcount Reduction (Largest Candidate Rule)**
-  Consolidates operations into fewer workstations/operators while strictly respecting customer demand.
-- **Scenario C: Maximum Capacity Surge (Parallel Operators & Task Splitting)**
-  Deconstructs critical bottleneck operations with dual operator assignments to maximize shift output.
-- Strict topological precedence verification preventing backward assembly flows.
+### 3. محرك التحسين وبحوث العمليات (3 Optimization Scenarios)
+- **سيناريو أ (تسوية الأحمال - RPW):** إعادة توزيع العمليات بدون تكاليف رأسمالية باستخدام خوارزمية الأوزان المكانية المرتّبة (Helgeson-Birnie).
+- **سيناريو ب (تقليص العمالة - LCR):** دمج محطات العمل وتقليص عدد العمالة مع الالتزام بتلبية طلب العميل.
+- **سيناريو ج (طاقة الذروة القصوى):** تخصيص عمالة متوازية وتجزئة عمليات عنق الزجاجة لمضاعفة الطاقة الإنتاجية للوردية.
 
-### 4. Time Study & Standard Work Sheet (دراسة الوقت والحركة)
-- 14-column spreadsheet covering manual, machine, walking, handling, and automatic durations.
-- Precedence dependency tagging and skill requirements.
-- Native **5-Sheet Excel Workbook Export (`.xlsx`)** (Summary, Time Study, Workstations, Operators, Metrics).
-- Full CSV export and Excel/CSV import parser.
+### 4. دراسة الوقت والتصدير لإكسل (Time Study & Excel Generator)
+- جدول تفصيلي بـ 14 حقلاً هندسياً شاملاً.
+- تصدير مصنف **Excel أصلي مكوّن من 5 أوراق عمل متكاملة** (`.xlsx`).
+- تصدير واستيراد ملفات CSV و Excel.
 
-### 5. Precedence Network DAG (مخطط التتابع والاعتماديات)
-- Directed Acyclic Graph (DAG) viewer illustrating critical path dependencies.
-- Kahn's algorithm cycle detection preventing deadlock dependency loops.
+### 5. تقرير هندسي رسمي معتمد (12-Section Audit Report)
+- تقرير فني شامل بـ 12 قسماً معتمداً للطباعة والتصدير كـ PDF (`window.print()`).
+- يتضمن المعادلات المطبقة، وخطة كايزن التنفيذية، وخانات التوقيع والاعتماد.
 
-### 6. Formal 12-Section Technical Audit Report (التقرير الهندسي المعتمد)
-- Ready for presentation to plant directors and clients.
-- Includes formulas, bottleneck diagnostics, 3-phase Kaizen roadmap (Immediate, SMED, Cross-training), and sign-off blocks.
-- One-click print / PDF export (`window.print()`).
-
-### 7. AI Industrial Engineering Copilot (المستشار الهندسي الذكي)
-- Powered by Google Gemini 3.8 Flash through a secure server-side proxy (`/api/ai/assistant`).
-- Grounded strictly in calculated line data (never invents measurements or numbers).
-- Bilingual responses with actionable shop-floor Kaizen recommendations.
+### 6. المستشار الهندسي الذكي (AI Copilot)
+- مدعوم بنموذج Google Gemini 3.8 Flash مع محاكاة هندسية داخلية في حال النشر الاستاتيكي بدون سيرفر.
+- يقدم حلول كايزن واقعية مستندة على الأرقام الفعلية لخط الإنتاج.
 
 ---
 
-## 🚀 Quick Start | البدء السريع
+## 💻 التشغيل المحلي (Local Development)
 
-### Prerequisites
-- Node.js 18.x or 20.x+
-- npm or bun
-
-### Installation
 ```bash
-# Clone the repository
-git clone https://github.com/YOUR_USERNAME/ai-production-line-balancer.git
-
-# Navigate into project directory
-cd ai-production-line-balancer
-
-# Install dependencies
+# تثبيت الحزم
 npm install
 
-# Start local full-stack development server (Port 3000)
+# تشغيل بيئة التطوير
 npm run dev
 ```
 
-Open `http://localhost:3000` in your web browser.
-
-### Production Build
-```bash
-# Build Vite frontend and compile Express server
-npm run build
-
-# Start production server
-npm start
-```
+افتح المتصفح على: `http://localhost:3000`
 
 ---
 
-## 📤 How to Publish to Your GitHub (طريقة النشر على حسابك في جيت هاب)
+## 👨‍💼 حقوق النشر والتواصل (Author & Contact)
 
-To push this repository to your own personal GitHub account:
-
-### الخطوة 1: أنشئ مستودعاً جديداً على جيت هاب (Create a new GitHub Repository)
-1. افتح متصفحك وسجل الدخول على [GitHub New Repository](https://github.com/new).
-2. اكتب اسم المستودع، مثلاً: `ai-production-line-balancer`.
-3. اختر المستودع **Public** أو **Private**.
-4. **لا تضع علامة صح** على (Initialize with README) لأن المشروع يحتوي بالفعل على ملفات جاهزة.
-5. اضغط زر **Create repository**.
-
-### الخطوة 2: ربط المشروع المحلي ورفعه (Link & Push to GitHub)
-افتح الطرفية (Terminal) في مجلد المشروع ونفّذ الأوامر التالية (استبدل `YOUR_USERNAME` باسم حسابك على جيت هاب):
-
-```bash
-# تهيئة المستودع وإضافة الملفات
-git init
-git add .
-git commit -m "feat: initial release of AI Production Line Balancer"
-
-# ضبط اسم الفرع الرئيسي
-git branch -M main
-
-# إضافة رابط مستودعك على جيت هاب
-git remote add origin https://github.com/YOUR_USERNAME/ai-production-line-balancer.git
-
-# رفع الكود بالكامل إلى جيت هاب
-git push -u origin main
-```
-
----
-
-## 📁 Project Structure | هيكلية المشروع
-
-```
-ai-production-line-balancer/
-├── index.html                   # HTML5 Entry Point with Cairo & IBM Plex Mono fonts
-├── metadata.json                # AI Studio & Applet configuration
-├── package.json                 # Dependencies & build scripts
-├── server.ts                    # Express server with server-side Gemini 3.8 Flash proxy
-├── tsconfig.json                # TypeScript compiler configuration
-├── vite.config.ts               # Vite build and Tailwind v4 configuration
-├── src/
-│   ├── App.tsx                  # Main Layout & Tab Router
-│   ├── main.tsx                 # React 19 root bootstrap
-│   ├── index.css                # Tailwind CSS v4 directives & print styling
-│   ├── components/
-│   │   ├── AIAssistantDrawer.tsx       # Gemini-powered IE copilot drawer
-│   │   ├── DashboardView.tsx           # Executive KPIs, bottlenecks & status
-│   │   ├── Navbar.tsx                  # Top header, live metrics, language toggle
-│   │   ├── OperationModal.tsx          # 16-field operation creator/editor
-│   │   ├── PrecedenceGraph.tsx         # Interactive DAG network viewer
-│   │   ├── ProductionLinesView.tsx     # Line preset switcher & calibration
-│   │   ├── ReportView.tsx              # 12-section printable audit report
-│   │   ├── ScenarioComparisonView.tsx  # Side-by-side optimization matrix
-│   │   ├── SettingsView.tsx            # JSON backup/restore & preferences
-│   │   ├── Sidebar.tsx                 # Responsive 10-view navigation drawer
-│   │   ├── TimeStudyTable.tsx          # 14-column spreadsheet with import/export
-│   │   ├── WorkersView.tsx             # Operator roster & skills matrix
-│   │   ├── WorkstationsView.tsx        # Workstation sequence & machinery layout
-│   │   └── YamazumiChart.tsx           # Stacked bar Yamazumi balance chart
-│   ├── context/
-│   │   └── LineContext.tsx             # Centralized bilingual state management
-│   ├── services/
-│   │   ├── calculationEngine.ts        # Bridge to engineering engine
-│   │   ├── calculationEngine.test.ts   # 11-step automated verification suite
-│   │   ├── excelService.ts             # 5-sheet native Excel & CSV generator
-│   │   ├── i18n.ts                     # Bilingual Arabic/English dictionary
-│   │   ├── optimizationEngine.ts       # RPW, LCR & Capacity Surge algorithms
-│   │   └── sampleData.ts               # 3 benchmark lines (Alternator, Phone, Compressor)
-│   ├── types/
-│   │   └── lineBalancing.ts            # Complete TypeScript domain interfaces
-│   └── utils/
-│       └── engineeringCalculationEngine.ts # Robust IE mathematical calculation engine
-```
-
----
-
-## 🧮 Industrial Engineering Formulations
-
-| Metric | Formula | Industrial Meaning |
-|---|---|---|
-| **Takt Time** ($T_{takt}$) | $\frac{T_{gross} - T_{nonprod}}{\text{Customer Demand}}$ | The required production pace to meet customer demand exactly. |
-| **Line Cycle Time** ($CT_{line}$) | $\max_{s} (CT_s)$ | Bottleneck workstation pacing the entire line. |
-| **Line Efficiency** ($E$) | $\frac{\sum t_i}{N_{stations} \times CT_{line}} \times 100\%$ | Proportion of total work content to total available station capacity. |
-| **Balance Delay** ($BD$) | $100\% - E$ | Percentage of idle time and unbalance losses across the line. |
-| **Theoretical Min Stations** ($N_{\min}$) | $\left\lceil \frac{\sum t_i}{T_{takt}} \right\rceil$ | Minimum physical workstations required under ideal zero-delay conditions. |
-| **Smoothness Index** ($SI$) | $\sqrt{\sum (CT_{line} - CT_s)^2}$ | Relative measure of workload smoothness among workstations. |
-| **Shift Capacity** | $\left\lfloor \frac{T_{net}}{CT_{line}} \right\rfloor \times \text{OEE}$ | Expected net finished units per shift considering planned downtime and OEE. |
-
----
-
-## 📄 License
-Distributed under the Apache License 2.0.
-Developed for manufacturing and industrial excellence.
+- **الاسم:** المهندس مينا خيرت (Eng. Mina Khairat)
+- **الهاتف / واتساب:** 01200224513 (+20 1200224513)
+- **البريد الإلكتروني:** minakhairat1@gmail.com
+- **التخصص:** Lead Industrial Systems Engineer & Full-Stack Developer
+- **الترخيص:** جميع الحقوق محفوظة © 2026 - نظام موازنة خطوط الإنتاج بالذكاء الاصطناعي (Apache 2.0).
