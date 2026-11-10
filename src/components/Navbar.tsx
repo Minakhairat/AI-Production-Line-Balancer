@@ -22,6 +22,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
     lines,
     switchLine,
     results,
+    customLogo,
     language,
     setLanguage,
     theme,
@@ -52,8 +53,12 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
             onClick={() => setActiveTab('dashboard')}
             className="flex items-center gap-2.5 cursor-pointer group"
           >
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-blue-500/20 group-hover:scale-105 transition-transform">
-              <Factory className="w-5 h-5" />
+            <div className="w-10 h-10 rounded-xl overflow-hidden shadow-md shadow-blue-500/25 group-hover:scale-105 transition-transform flex items-center justify-center bg-neutral-900 border border-neutral-200 dark:border-neutral-700/60 shrink-0">
+              <img
+                src={customLogo || '/favicon.svg'}
+                alt="AI Production Line Balancer Logo"
+                className="w-full h-full object-cover"
+              />
             </div>
             <div>
               <div className="flex items-center gap-1.5">

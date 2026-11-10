@@ -21,7 +21,7 @@ interface SidebarProps {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
-  const { line, results, activeTab, setActiveTab, language, t } = useLineBalancing();
+  const { line, results, activeTab, setActiveTab, customLogo, language, t } = useLineBalancing();
 
   const navItems: { tab: ActiveTab; labelKey: string; icon: any; badge?: string }[] = [
     { tab: 'dashboard', labelKey: 'dashboard', icon: LayoutDashboard },
@@ -59,9 +59,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
         <div className="space-y-6">
           {/* Mobile close button */}
           <div className="flex items-center justify-between lg:hidden pb-2 border-b border-neutral-100 dark:border-neutral-800">
-            <span className="font-bold text-xs uppercase tracking-wider text-neutral-400">
-              {language === 'ar' ? 'القائمة الرئيسية' : 'Navigation Menu'}
-            </span>
+            <div className="flex items-center gap-2">
+              <img src={customLogo || '/favicon.svg'} alt="Logo" className="w-6 h-6 rounded-md object-cover" />
+              <span className="font-bold text-xs text-neutral-800 dark:text-neutral-200">
+                {language === 'ar' ? 'موازن خطوط الإنتاج' : 'Line Balancer'}
+              </span>
+            </div>
             <button
               onClick={onClose}
               className="p-1.5 rounded-lg text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800"

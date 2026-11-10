@@ -3,7 +3,7 @@ import { useLineBalancing } from '../context/LineContext';
 import { Printer, FileText, CheckCircle2, ShieldCheck, Layers, Gauge, Timer } from 'lucide-react';
 
 export const ReportView: React.FC = () => {
-  const { line, results, scenarios, language, t } = useLineBalancing();
+  const { line, results, scenarios, customLogo, language, t } = useLineBalancing();
 
   const handlePrint = () => {
     window.print();
@@ -43,18 +43,27 @@ export const ReportView: React.FC = () => {
         {/* Document Header */}
         <div className="border-b-2 border-neutral-900 dark:border-neutral-100 pb-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
-              <span className="text-[10px] font-mono font-bold tracking-widest uppercase text-blue-600 dark:text-blue-400 block mb-1">
-                INDUSTRIAL ENGINEERING & OPERATIONS RESEARCH REPORT
-              </span>
-              <h1 className="text-2xl sm:text-3xl font-black tracking-tight">
-                {language === 'ar' ? 'تقرير التقييم والتوازن الهندسي لخط التجميع' : 'Assembly Line Balancing Technical Audit'}
-              </h1>
-              <p className="text-sm font-semibold text-neutral-500 mt-1">
-                {line.name} — Model: {line.productModel}
-              </p>
+            <div className="flex items-center gap-3.5">
+              <div className="w-12 h-12 rounded-xl overflow-hidden shadow-sm bg-neutral-900 border border-neutral-200 dark:border-neutral-700 shrink-0">
+                <img
+                  src={customLogo || '/favicon.svg'}
+                  alt="Logo"
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              <div>
+                <span className="text-[10px] font-mono font-bold tracking-widest uppercase text-blue-600 dark:text-blue-400 block mb-0.5">
+                  INDUSTRIAL ENGINEERING & OPERATIONS RESEARCH REPORT
+                </span>
+                <h1 className="text-xl sm:text-2xl font-black tracking-tight">
+                  {language === 'ar' ? 'تقرير التقييم والتوازن الهندسي لخط التجميع' : 'Assembly Line Balancing Technical Audit'}
+                </h1>
+                <p className="text-xs font-semibold text-neutral-500 mt-0.5">
+                  {line.name} — Model: {line.productModel}
+                </p>
+              </div>
             </div>
-            <div className="text-right text-xs font-mono text-neutral-500">
+            <div className="text-right text-xs font-mono text-neutral-500 shrink-0">
               <div>{t('auditDate')}: {currentDate}</div>
               <div className="text-emerald-600 font-bold mt-1">
                 {t('engineeringStatus')}

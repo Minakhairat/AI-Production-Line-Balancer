@@ -1,6 +1,21 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { useLineBalancing } from '../context/LineContext';
-import { Settings, Languages, Moon, Sun, RotateCcw, Download, Upload, ShieldCheck, CheckCircle2, AlertCircle, X } from 'lucide-react';
+import {
+  Settings,
+  Languages,
+  Moon,
+  Sun,
+  RotateCcw,
+  Download,
+  Upload,
+  ShieldCheck,
+  CheckCircle2,
+  AlertCircle,
+  X,
+  Image as ImageIcon,
+  UploadCloud,
+  RefreshCw,
+} from 'lucide-react';
 
 export const SettingsView: React.FC = () => {
   const {
@@ -12,9 +27,12 @@ export const SettingsView: React.FC = () => {
     lines,
     exportDatabase,
     importDatabase,
+    customLogo,
+    setCustomLogo,
     t,
   } = useLineBalancing();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const logoInputRef = useRef<HTMLInputElement>(null);
   const [importStatus, setImportStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [showResetModal, setShowResetModal] = useState<boolean>(false);
 
@@ -71,6 +89,48 @@ export const SettingsView: React.FC = () => {
     };
     reader.readAsText(file);
     e.target.value = '';
+  };
+
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      setImportStatus({
+        type: 'error',
+        message:
+          language === 'ar'
+            ? 'يرجى اختيار ملف صورة صالح (PNG, SVG, JPG, WEBP)'
+            : 'Please select a valid image file (PNG, SVG, JPG, WEBP)',
+      });
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const dataUrl = event.target?.result as string;
+      setCustomLogo(dataUrl);
+      setImportStatus({
+        type: 'success',
+        message:
+          language === 'ar'
+            ? 'تم تحديث لوجو الموقع وعنوان المتصفح بنجاح!'
+            : 'Website logo and browser tab icon updated successfully!',
+      });
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+
+  const handleResetLogo = () => {
+    setCustomLogo(null);
+    setImportStatus({
+      type: 'success',
+      message:
+        language === 'ar'
+          ? 'تمت استعادة اللوجو الهندسي النموذجي بنجاح.'
+          : 'Default engineered logo restored successfully.',
+    });
   };
 
   return (
@@ -172,6 +232,83 @@ export const SettingsView: React.FC = () => {
             {theme === 'dark' ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4" />}
             <span>{theme === 'dark' ? (language === 'ar' ? 'الوضع الفاتح' : 'Light Mode') : (language === 'ar' ? 'الوضع الداكن' : 'Dark Mode')}</span>
           </button>
+        </div>
+      </div>
+
+      {/* Brand & Website Logo Management */}
+      <div className="p-6 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl space-y-5">
+        <div className="flex items-center justify-between border-b border-neutral-200 dark:border-neutral-800 pb-3">
+          <div className="flex items-center gap-2">
+            <ImageIcon className="w-4 h-4 text-blue-500" />
+            <h3 className="font-bold text-sm text-neutral-900 dark:text-neutral-100">
+              {language === 'ar' ? 'لوجو الموقع وعنوان المتصفح (Website & Title Logo)' : 'Website Logo & Browser Title Icon'}
+            </h3>
+          </div>
+          <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-blue-500/10 text-blue-500 border border-blue-500/20 font-bold">
+            {customLogo ? (language === 'ar' ? 'لوجو مخصص' : 'Custom Logo') : (language === 'ar' ? 'اللوجو الافتراضي' : 'Default Logo')}
+          </span>
+        </div>
+
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            {/* Logo Preview */}
+            <div className="w-14 h-14 rounded-2xl overflow-hidden shadow-md shadow-blue-500/20 bg-neutral-900 border-2 border-neutral-200 dark:border-neutral-700/80 flex items-center justify-center shrink-0">
+              <img
+                src={customLogo || '/favicon.svg'}
+                alt="Logo Preview"
+                className="w-full h-full object-cover"
+              />
+            </div>
+            <div>
+              <div className="font-bold text-xs text-neutral-800 dark:text-neutral-200">
+                {language === 'ar' ? 'معاينة لوجو المنظومة وعنوان الموقع' : 'Active Title & Header Logo'}
+              </div>
+              <p className="text-xs text-neutral-500 mt-0.5 leading-relaxed">
+                {language === 'ar'
+                  ? 'يظهر اللوجو في شريط عنوان المتصفح بجانب اسم الموقع (Favicon)، وفي رأس شريط التنقل (Navbar)، وفي التقارير المطبوعة.'
+                  : 'Appears in the browser tab title bar (Favicon), navigation header (Navbar), and printable reports.'}
+              </p>
+              <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                <span className="px-2 py-0.5 rounded text-[10px] bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 font-medium">
+                  {language === 'ar' ? '✓ تبويب المتصفح (Favicon)' : '✓ Browser Tab (Favicon)'}
+                </span>
+                <span className="px-2 py-0.5 rounded text-[10px] bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 font-medium">
+                  {language === 'ar' ? '✓ رأس الصفحة (Navbar)' : '✓ Header (Navbar)'}
+                </span>
+                <span className="px-2 py-0.5 rounded text-[10px] bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 font-medium">
+                  {language === 'ar' ? '✓ التقارير المطبوعة' : '✓ Printable Reports'}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 self-start sm:self-auto shrink-0 flex-wrap">
+            <input
+              type="file"
+              ref={logoInputRef}
+              onChange={handleLogoUpload}
+              accept="image/png,image/jpeg,image/svg+xml,image/webp"
+              className="hidden"
+            />
+            <button
+              onClick={() => logoInputRef.current?.click()}
+              className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-500 rounded-xl transition-colors shadow-xs"
+            >
+              <UploadCloud className="w-3.5 h-3.5" />
+              <span>{language === 'ar' ? 'رفع لوجو مخصص' : 'Upload Logo'}</span>
+            </button>
+
+            {customLogo && (
+              <button
+                onClick={handleResetLogo}
+                className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-neutral-700 dark:text-neutral-300 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 rounded-xl transition-colors"
+                title={language === 'ar' ? 'استعادة اللوجو الافتراضي للمنظومة' : 'Reset to default logo'}
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                <span>{language === 'ar' ? 'استعادة الافتراضي' : 'Reset'}</span>
+              </button>
+            )}
+          </div>
         </div>
       </div>
 

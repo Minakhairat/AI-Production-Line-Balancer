@@ -53,6 +53,8 @@ export interface LineContextType {
   setIsOperationModalOpen: (open: boolean) => void;
   editingOperation: Operation | null;
   setEditingOperation: (op: Operation | null) => void;
+  customLogo: string | null;
+  setCustomLogo: (logo: string | null) => void;
 
   // Actions on Active Line & Multiple Lines
   updateLine: (updated: Partial<ProductionLine>) => void;
@@ -84,6 +86,7 @@ const ACTIVE_ID_STORAGE_KEY = 'ai_line_balancer_active_id_v3';
 const LEGACY_STORAGE_KEY = 'ai_line_balancer_state_v2';
 const LANG_STORAGE_KEY = 'ai_line_balancer_lang_v2';
 const THEME_STORAGE_KEY = 'ai_line_balancer_theme_v2';
+const LOGO_STORAGE_KEY = 'ai_line_balancer_custom_logo_v1';
 
 export const LineProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   // Load initial lines list safely
@@ -127,6 +130,36 @@ export const LineProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (found) return found;
     return lines[0] || SAMPLE_LINES[0];
   }, [lines, activeLineId]);
+
+  // Custom Logo State with localStorage persistence
+  const [customLogo, setCustomLogoState] = useState<string | null>(() => {
+    try {
+      return localStorage.getItem(LOGO_STORAGE_KEY);
+    } catch {}
+    return null;
+  });
+
+  const setCustomLogo = (logo: string | null) => {
+    setCustomLogoState(logo);
+    try {
+      if (logo) {
+        localStorage.setItem(LOGO_STORAGE_KEY, logo);
+      } else {
+        localStorage.removeItem(LOGO_STORAGE_KEY);
+      }
+    } catch (e) {
+      console.error('Failed to save logo to storage', e);
+    }
+  };
+
+  // Sync favicon with custom logo or default svg
+  useEffect(() => {
+    const iconLinks = document.querySelectorAll<HTMLLinkElement>("link[rel*='icon']");
+    const logoUrl = customLogo || '/favicon.svg';
+    iconLinks.forEach((el) => {
+      el.href = logoUrl;
+    });
+  }, [customLogo]);
 
   // Default language to Arabic as requested by user
   const [language, setLanguageState] = useState<Language>(() => {
@@ -473,6 +506,8 @@ export const LineProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setIsOperationModalOpen,
         editingOperation,
         setEditingOperation,
+        customLogo,
+        setCustomLogo,
         updateLine,
         createLine,
         duplicateLine,
