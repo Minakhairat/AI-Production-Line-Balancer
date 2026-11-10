@@ -16,6 +16,7 @@ import {
   UploadCloud,
   RefreshCw,
 } from 'lucide-react';
+import { BrandLogo } from './BrandLogo';
 
 export const SettingsView: React.FC = () => {
   const {
@@ -252,13 +253,10 @@ export const SettingsView: React.FC = () => {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             {/* Logo Preview */}
-            <div className="w-14 h-14 rounded-2xl overflow-hidden shadow-md shadow-blue-500/20 bg-neutral-900 border-2 border-neutral-200 dark:border-neutral-700/80 flex items-center justify-center shrink-0">
-              <img
-                src={customLogo || '/favicon.svg'}
-                alt="Logo Preview"
-                className="w-full h-full object-cover"
-              />
-            </div>
+            <BrandLogo
+              className="w-14 h-14 rounded-2xl overflow-hidden shadow-md shadow-blue-500/20 bg-neutral-900 border-2 border-neutral-200 dark:border-neutral-700/80 flex items-center justify-center shrink-0"
+              alt="Logo Preview"
+            />
             <div>
               <div className="font-bold text-xs text-neutral-800 dark:text-neutral-200">
                 {language === 'ar' ? 'معاينة لوجو المنظومة وعنوان الموقع' : 'Active Title & Header Logo'}

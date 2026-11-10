@@ -14,6 +14,7 @@ import {
   AlertTriangle,
   X,
 } from 'lucide-react';
+import { BrandLogo } from './BrandLogo';
 
 interface SidebarProps {
   isOpen?: boolean;
@@ -60,7 +61,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
           {/* Mobile close button */}
           <div className="flex items-center justify-between lg:hidden pb-2 border-b border-neutral-100 dark:border-neutral-800">
             <div className="flex items-center gap-2">
-              <img src={customLogo || '/favicon.svg'} alt="Logo" className="w-6 h-6 rounded-md object-cover" />
+              <BrandLogo className="w-6 h-6 rounded-md overflow-hidden bg-neutral-900 shrink-0" />
               <span className="font-bold text-xs text-neutral-800 dark:text-neutral-200">
                 {language === 'ar' ? 'موازن خطوط الإنتاج' : 'Line Balancer'}
               </span>

@@ -1,6 +1,7 @@
 import React from 'react';
 import { useLineBalancing } from '../context/LineContext';
 import { Printer, FileText, CheckCircle2, ShieldCheck, Layers, Gauge, Timer } from 'lucide-react';
+import { BrandLogo } from './BrandLogo';
 
 export const ReportView: React.FC = () => {
   const { line, results, scenarios, customLogo, language, t } = useLineBalancing();
@@ -44,13 +45,10 @@ export const ReportView: React.FC = () => {
         <div className="border-b-2 border-neutral-900 dark:border-neutral-100 pb-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex items-center gap-3.5">
-              <div className="w-12 h-12 rounded-xl overflow-hidden shadow-sm bg-neutral-900 border border-neutral-200 dark:border-neutral-700 shrink-0">
-                <img
-                  src={customLogo || '/favicon.svg'}
-                  alt="Logo"
-                  className="w-full h-full object-cover"
-                />
-              </div>
+              <BrandLogo
+                className="w-12 h-12 rounded-xl overflow-hidden shadow-sm bg-neutral-900 border border-neutral-200 dark:border-neutral-700 shrink-0"
+                alt="Report Header Logo"
+              />
               <div>
                 <span className="text-[10px] font-mono font-bold tracking-widest uppercase text-blue-600 dark:text-blue-400 block mb-0.5">
                   INDUSTRIAL ENGINEERING & OPERATIONS RESEARCH REPORT

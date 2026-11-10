@@ -11,6 +11,7 @@ import {
   AlertTriangle,
   Menu,
 } from 'lucide-react';
+import { BrandLogo } from './BrandLogo';
 
 interface NavbarProps {
   onToggleSidebar?: () => void;
@@ -53,13 +54,10 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
             onClick={() => setActiveTab('dashboard')}
             className="flex items-center gap-2.5 cursor-pointer group"
           >
-            <div className="w-10 h-10 rounded-xl overflow-hidden shadow-md shadow-blue-500/25 group-hover:scale-105 transition-transform flex items-center justify-center bg-neutral-900 border border-neutral-200 dark:border-neutral-700/60 shrink-0">
-              <img
-                src={customLogo || '/favicon.svg'}
-                alt="AI Production Line Balancer Logo"
-                className="w-full h-full object-cover"
-              />
-            </div>
+            <BrandLogo
+              className="w-10 h-10 rounded-xl overflow-hidden shadow-md shadow-blue-500/25 group-hover:scale-105 transition-transform flex items-center justify-center bg-neutral-900 border border-neutral-200 dark:border-neutral-700/60 shrink-0"
+              alt="AI Production Line Balancer Logo"
+            />
             <div>
               <div className="flex items-center gap-1.5">
                 <span className="font-extrabold text-sm sm:text-base tracking-tight text-neutral-900 dark:text-white">

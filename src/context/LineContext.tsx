@@ -11,6 +11,7 @@ import { calculateLineBalancing } from '../services/calculationEngine';
 import { generateOptimizationScenarios } from '../services/optimizationEngine';
 import { SAMPLE_LINES } from '../services/sampleData';
 import { getTranslation } from '../services/i18n';
+import { DEFAULT_LOGO_DATA_URI } from '../assets/logoSvg';
 
 export type ActiveTab =
   | 'dashboard'
@@ -152,10 +153,10 @@ export const LineProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  // Sync favicon with custom logo or default svg
+  // Sync favicon with custom logo or default embedded vector data uri
   useEffect(() => {
     const iconLinks = document.querySelectorAll<HTMLLinkElement>("link[rel*='icon']");
-    const logoUrl = customLogo || '/favicon.svg';
+    const logoUrl = customLogo || DEFAULT_LOGO_DATA_URI;
     iconLinks.forEach((el) => {
       el.href = logoUrl;
     });
