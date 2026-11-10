@@ -54,7 +54,7 @@ export function runEngineeringVerificationTests(): { passed: boolean; testCount:
     `Line Efficiency + Balance Delay = 100%: Sum is ${sumEfficiency}%`
   );
 
-  // Test 4: Bottleneck Identification
+  // Test 4: Bottleneck Identification & Shift Production Capacity Formula
   // The slowest station cycle time must match lineCycleTime
   const maxWsCycle = Math.max(...autoResults.workstationMetrics.map((w) => w.cycleTime));
   assert(
@@ -64,6 +64,11 @@ export function runEngineeringVerificationTests(): { passed: boolean; testCount:
   assert(
     autoResults.bottlenecks.length > 0,
     `Bottleneck detected correctly: Found ${autoResults.bottlenecks.join(', ')}`
+  );
+  const expectedCapacity = Math.floor(autoResults.netAvailableTime / autoResults.lineCycleTime);
+  assert(
+    autoResults.shiftCapacity === expectedCapacity,
+    `Shift Capacity equals Net Available Time / Bottleneck: Expected ${expectedCapacity}u, got ${autoResults.shiftCapacity}u`
   );
 
   // Test 5: Optimization Suite (RPW & LCR)

@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { useLineBalancing } from '../context/LineContext';
 import { Operation } from '../types/lineBalancing';
 import { exportToExcel, exportOperationsToCSV, parseImportFile } from '../services/excelService';
@@ -13,6 +13,7 @@ import {
   CheckCircle2,
   Clock,
   Filter,
+  X,
 } from 'lucide-react';
 
 function getOpTotal(op: Operation): number {
@@ -38,6 +39,15 @@ export const TimeStudyTable: React.FC = () => {
   } = useLineBalancing();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [opPendingDelete, setOpPendingDelete] = useState<Operation | null>(null);
+  const [importStatus, setImportStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
+  useEffect(() => {
+    if (importStatus) {
+      const timer = setTimeout(() => setImportStatus(null), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [importStatus]);
 
   const handleExportExcel = () => {
     exportToExcel({ line, results }, `${line.name.replace(/\s+/g, '_')}_Line_Balancing.xlsx`);
@@ -58,23 +68,53 @@ export const TimeStudyTable: React.FC = () => {
           operations: parsed.operations,
           workstations: parsed.workstations && parsed.workstations.length > 0 ? parsed.workstations : line.workstations,
         });
-        alert(
-          language === 'ar'
-            ? `تم استيراد ${parsed.operations.length} عملية بنجاح!`
-            : `Successfully imported ${parsed.operations.length} operations!`
-        );
+        setImportStatus({
+          type: 'success',
+          message:
+            language === 'ar'
+              ? `تم استيراد ${parsed.operations.length} عملية بنجاح وحفظها في الخط!`
+              : `Successfully imported ${parsed.operations.length} operations into line!`,
+        });
       }
     } catch (err: any) {
-      alert(
-        language === 'ar'
-          ? `فشل استيراد الملف: ${err.message}`
-          : `Failed to import file: ${err.message}`
-      );
+      setImportStatus({
+        type: 'error',
+        message:
+          language === 'ar'
+            ? `فشل استيراد الملف: ${err.message}`
+            : `Failed to import file: ${err.message}`,
+      });
     }
   };
 
   return (
     <div className="space-y-6">
+      {/* Import Status Alert Banner */}
+      {importStatus && (
+        <div
+          className={`p-3.5 rounded-xl border flex items-center justify-between text-xs font-semibold shadow-xs ${
+            importStatus.type === 'success'
+              ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400'
+              : 'bg-rose-500/10 border-rose-500/30 text-rose-600 dark:text-rose-400'
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            {importStatus.type === 'success' ? (
+              <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-500" />
+            ) : (
+              <AlertCircle className="w-4 h-4 shrink-0 text-rose-500" />
+            )}
+            <span>{importStatus.message}</span>
+          </div>
+          <button
+            onClick={() => setImportStatus(null)}
+            className="p-0.5 hover:opacity-80"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+
       {/* Table Header and Action Toolbar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800">
         <div>
@@ -239,11 +279,7 @@ export const TimeStudyTable: React.FC = () => {
                           <Edit className="w-3.5 h-3.5" />
                         </button>
                         <button
-                          onClick={() => {
-                            if (confirm(language === 'ar' ? `هل أنت متأكد من حذف ${op.name}؟` : `Delete operation ${op.name}?`)) {
-                              deleteOperation(op.id);
-                            }
-                          }}
+                          onClick={() => setOpPendingDelete(op)}
                           className="p-1 rounded-lg hover:bg-rose-100 dark:hover:bg-rose-950/60 text-rose-500 transition-colors"
                           title="Delete"
                         >
@@ -280,6 +316,53 @@ export const TimeStudyTable: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Delete Operation Confirmation Modal */}
+      {opPendingDelete && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-scale-in">
+            <div className="flex items-center gap-3 text-rose-500">
+              <div className="p-3 rounded-full bg-rose-50 dark:bg-rose-950/50">
+                <Trash2 className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="font-bold text-base text-neutral-900 dark:text-white">
+                  {language === 'ar' ? 'تأكيد حذف العملية' : 'Confirm Operation Deletion'}
+                </h3>
+                <p className="text-xs text-neutral-500">
+                  {language === 'ar' ? 'سيتم حذف العملية من خط الإنتاج' : 'Operation will be removed from line'}
+                </p>
+              </div>
+            </div>
+
+            <p className="text-sm text-neutral-600 dark:text-neutral-300 leading-relaxed">
+              {language === 'ar'
+                ? `هل أنت متأكد من حذف العملية "${opPendingDelete.name}" (كود: ${opPendingDelete.id})؟`
+                : `Are you sure you want to delete operation "${opPendingDelete.name}" (ID: ${opPendingDelete.id})?`}
+            </p>
+
+            <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-neutral-100 dark:border-neutral-800">
+              <button
+                type="button"
+                onClick={() => setOpPendingDelete(null)}
+                className="px-4 py-2 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 font-medium text-xs hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
+              >
+                {language === 'ar' ? 'إلغاء' : 'Cancel'}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  deleteOperation(opPendingDelete.id);
+                  setOpPendingDelete(null);
+                }}
+                className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs shadow-sm transition-colors"
+              >
+                {language === 'ar' ? 'حذف العملية' : 'Delete Operation'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -1,19 +1,32 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { useLineBalancing } from '../context/LineContext';
-import { Settings, Languages, Moon, Sun, RotateCcw, Download, Upload, ShieldCheck } from 'lucide-react';
+import { Settings, Languages, Moon, Sun, RotateCcw, Download, Upload, ShieldCheck, CheckCircle2, AlertCircle, X } from 'lucide-react';
 
 export const SettingsView: React.FC = () => {
-  const { language, setLanguage, theme, toggleTheme, resetToSampleData, lines, activeLine, t } = useLineBalancing();
+  const {
+    language,
+    setLanguage,
+    theme,
+    toggleTheme,
+    resetToSampleData,
+    lines,
+    exportDatabase,
+    importDatabase,
+    t,
+  } = useLineBalancing();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [importStatus, setImportStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [showResetModal, setShowResetModal] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (importStatus) {
+      const timer = setTimeout(() => setImportStatus(null), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [importStatus]);
 
   const handleExportAllJSON = () => {
-    const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(lines, null, 2));
-    const downloadAnchor = document.createElement('a');
-    downloadAnchor.setAttribute('href', dataStr);
-    downloadAnchor.setAttribute('download', `AI_Line_Balancer_Database_${new Date().toISOString().slice(0, 10)}.json`);
-    document.body.appendChild(downloadAnchor);
-    downloadAnchor.click();
-    downloadAnchor.remove();
+    exportDatabase();
   };
 
   const handleImportJSON = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -24,21 +37,70 @@ export const SettingsView: React.FC = () => {
     reader.onload = (event) => {
       try {
         const parsed = JSON.parse(event.target?.result as string);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          localStorage.setItem('ai_line_balancer_lines_v1', JSON.stringify(parsed));
-          window.location.reload();
+        // Support both direct array of lines and wrapped export object { lines: [...] }
+        const linesArray = Array.isArray(parsed)
+          ? parsed
+          : Array.isArray(parsed?.lines)
+          ? parsed.lines
+          : null;
+
+        if (linesArray && linesArray.length > 0 && linesArray[0].workstations && linesArray[0].operations) {
+          importDatabase(linesArray);
+          setImportStatus({
+            type: 'success',
+            message:
+              language === 'ar'
+                ? `تم استيراد ${linesArray.length} خط إنتاج وموديلات بنجاح وحفظها محلياً!`
+                : `Successfully imported ${linesArray.length} production line models and saved locally!`,
+          });
         } else {
-          alert(language === 'ar' ? 'صيغة ملف النسخ الاحتياطي غير صالحة.' : 'Invalid backup file format.');
+          setImportStatus({
+            type: 'error',
+            message:
+              language === 'ar'
+                ? 'صيغة ملف النسخ الاحتياطي غير صالحة. تأكد من احتواء الملف على محطات العمل والعمليات.'
+                : 'Invalid backup file format. Ensure the file contains workstations and operations.',
+          });
         }
       } catch (err: any) {
-        alert(`${language === 'ar' ? 'فشل استيراد النسخة الاحتياطية' : 'Failed to parse backup'}: ${err.message}`);
+        setImportStatus({
+          type: 'error',
+          message: `${language === 'ar' ? 'فشل استيراد النسخة الاحتياطية' : 'Failed to parse backup'}: ${err.message}`,
+        });
       }
     };
     reader.readAsText(file);
+    e.target.value = '';
   };
 
   return (
     <div className="space-y-6 max-w-4xl">
+      {/* Import Status Alert Banner */}
+      {importStatus && (
+        <div
+          className={`p-3.5 rounded-xl border flex items-center justify-between text-xs font-semibold shadow-xs ${
+            importStatus.type === 'success'
+              ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400'
+              : 'bg-rose-500/10 border-rose-500/30 text-rose-600 dark:text-rose-400'
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            {importStatus.type === 'success' ? (
+              <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-500" />
+            ) : (
+              <AlertCircle className="w-4 h-4 shrink-0 text-rose-500" />
+            )}
+            <span>{importStatus.message}</span>
+          </div>
+          <button
+            onClick={() => setImportStatus(null)}
+            className="p-0.5 hover:opacity-80"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+
       <div className="p-4 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg">
         <h2 className="text-base font-bold text-neutral-900 dark:text-neutral-100 flex items-center gap-2">
           <Settings className="w-4 h-4 text-neutral-500" />
@@ -165,11 +227,7 @@ export const SettingsView: React.FC = () => {
           </div>
 
           <button
-            onClick={() => {
-              if (confirm(language === 'ar' ? 'هل تريد استعادة جميع بيانات المصنع الافتراضية؟' : 'Reset all production lines to initial sample datasets?')) {
-                resetToSampleData();
-              }
-            }}
+            onClick={() => setShowResetModal(true)}
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/50 border border-rose-200 dark:border-rose-900 rounded-md transition-colors"
           >
             <RotateCcw className="w-3.5 h-3.5" />
@@ -218,6 +276,57 @@ export const SettingsView: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Reset Confirmation Modal */}
+      {showResetModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-scale-in">
+            <div className="flex items-center gap-3 text-rose-500">
+              <div className="p-3 rounded-full bg-rose-50 dark:bg-rose-950/50">
+                <RotateCcw className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="font-bold text-base text-neutral-900 dark:text-white">
+                  {language === 'ar' ? 'تأكيد استعادة بيانات المصنع' : 'Confirm Factory Reset'}
+                </h3>
+                <p className="text-xs text-neutral-500">
+                  {language === 'ar' ? 'سيتم مسح التعديلات واستعادة النماذج القياسية' : 'Restores default sample lines'}
+                </p>
+              </div>
+            </div>
+
+            <p className="text-sm text-neutral-600 dark:text-neutral-300 leading-relaxed">
+              {language === 'ar'
+                ? 'هل تريد استعادة جميع بيانات المصنع الافتراضية؟ سيتم استبدال الخطوط الحالية بالنماذج القياسية الثلاثة.'
+                : 'Reset all production lines to initial sample datasets? Current custom modifications will be replaced with benchmark datasets.'}
+            </p>
+
+            <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-neutral-100 dark:border-neutral-800">
+              <button
+                type="button"
+                onClick={() => setShowResetModal(false)}
+                className="px-4 py-2 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 font-medium text-xs hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
+              >
+                {language === 'ar' ? 'إلغاء' : 'Cancel'}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  resetToSampleData();
+                  setShowResetModal(false);
+                  setImportStatus({
+                    type: 'success',
+                    message: language === 'ar' ? 'تمت استعادة البيانات الافتراضية بنجاح.' : 'Factory benchmark lines restored successfully.',
+                  });
+                }}
+                className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs shadow-sm transition-colors"
+              >
+                {language === 'ar' ? 'استعادة البيانات' : 'Reset Database'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

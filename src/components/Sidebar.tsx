@@ -128,6 +128,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
               {results.taktTime.toFixed(1)}s
             </span>
           </div>
+          <div className="flex justify-between">
+            <span>{language === 'ar' ? 'طاقة الوردية:' : 'Capacity:'}</span>
+            <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
+              {results.shiftCapacity} {language === 'ar' ? 'قطعة' : 'u'}
+            </span>
+          </div>
         </div>
       </aside>
     </>

@@ -32,6 +32,7 @@ export interface LineContextType {
   line: ProductionLine;
   activeLine: ProductionLine;
   lines: ProductionLine[];
+  activeLineId: string;
   results: CalculationResults;
   scenarios: OptimizationScenario[];
   activeTab: ActiveTab;
@@ -53,8 +54,13 @@ export interface LineContextType {
   editingOperation: Operation | null;
   setEditingOperation: (op: Operation | null) => void;
 
-  // Actions
+  // Actions on Active Line & Multiple Lines
   updateLine: (updated: Partial<ProductionLine>) => void;
+  createLine: (newLine: ProductionLine) => void;
+  duplicateLine: (lineId: string) => void;
+  deleteLine: (lineId: string) => void;
+  switchLine: (lineId: string) => void;
+  switchLinePreset: (presetId: string) => void;
   addOperation: (op: Operation) => void;
   updateOperation: (op: Operation) => void;
   deleteOperation: (id: string) => void;
@@ -65,39 +71,62 @@ export interface LineContextType {
   updateOperator: (worker: Operator) => void;
   deleteOperator: (id: string) => void;
   applyScenario: (scenarioId: string) => void;
-  switchLinePreset: (presetId: string) => void;
+  importDatabase: (importedLines: ProductionLine[]) => void;
+  exportDatabase: () => void;
   resetToSample: () => void;
   resetToSampleData: () => void;
 }
 
 const LineContext = createContext<LineContextType | undefined>(undefined);
 
-const STORAGE_KEY = 'ai_line_balancer_state_v2';
+const LINES_STORAGE_KEY = 'ai_line_balancer_lines_v3';
+const ACTIVE_ID_STORAGE_KEY = 'ai_line_balancer_active_id_v3';
+const LEGACY_STORAGE_KEY = 'ai_line_balancer_state_v2';
 const LANG_STORAGE_KEY = 'ai_line_balancer_lang_v2';
 const THEME_STORAGE_KEY = 'ai_line_balancer_theme_v2';
 
 export const LineProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  // Load initial line safely
-  const [line, setLine] = useState<ProductionLine>(() => {
+  // Load initial lines list safely
+  const [lines, setLines] = useState<ProductionLine[]>(() => {
     try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (
-          parsed &&
-          Array.isArray(parsed.workstations) &&
-          parsed.workstations.length > 0 &&
-          Array.isArray(parsed.operations) &&
-          parsed.operations.length > 0
-        ) {
+      const savedLines = localStorage.getItem(LINES_STORAGE_KEY);
+      if (savedLines) {
+        const parsed = JSON.parse(savedLines);
+        if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].workstations && parsed[0].operations) {
           return parsed;
         }
       }
+
+      // Check legacy single-line storage
+      const legacySaved = localStorage.getItem(LEGACY_STORAGE_KEY);
+      if (legacySaved) {
+        const parsedLegacy = JSON.parse(legacySaved);
+        if (parsedLegacy && parsedLegacy.workstations && parsedLegacy.operations) {
+          const merged = [parsedLegacy, ...SAMPLE_LINES.filter((s) => s.id !== parsedLegacy.id)];
+          return merged;
+        }
+      }
     } catch (e) {
-      console.warn('Could not read saved line state, loading default factory sample', e);
+      console.warn('Could not read saved lines list, loading default factory benchmark lines', e);
     }
-    return SAMPLE_LINES[0];
+    return JSON.parse(JSON.stringify(SAMPLE_LINES));
   });
+
+  // Track active line ID
+  const [activeLineId, setActiveLineId] = useState<string>(() => {
+    try {
+      const savedActiveId = localStorage.getItem(ACTIVE_ID_STORAGE_KEY);
+      if (savedActiveId) return savedActiveId;
+    } catch {}
+    return lines[0]?.id || SAMPLE_LINES[0].id;
+  });
+
+  // Active line is always the item matching activeLineId
+  const line = useMemo<ProductionLine>(() => {
+    const found = lines.find((l) => l.id === activeLineId);
+    if (found) return found;
+    return lines[0] || SAMPLE_LINES[0];
+  }, [lines, activeLineId]);
 
   // Default language to Arabic as requested by user
   const [language, setLanguageState] = useState<Language>(() => {
@@ -156,14 +185,17 @@ export const LineProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   }, [theme]);
 
-  // Persist line changes
+  // Persist all lines to localStorage whenever lines array changes
   useEffect(() => {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(line));
+      localStorage.setItem(LINES_STORAGE_KEY, JSON.stringify(lines));
+      localStorage.setItem(ACTIVE_ID_STORAGE_KEY, activeLineId);
+      // Keep legacy key in sync for backwards compatibility
+      localStorage.setItem(LEGACY_STORAGE_KEY, JSON.stringify(line));
     } catch (e) {
-      console.error('Failed to persist line state', e);
+      console.error('Failed to persist lines database to storage', e);
     }
-  }, [line]);
+  }, [lines, activeLineId, line]);
 
   // Translation helper
   const t = (key: string, fallback?: string): string => {
@@ -190,127 +222,228 @@ export const LineProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   }, [line, results]);
 
-  // CRUD handlers
+  // Update active line parameters
   const updateLine = (updated: Partial<ProductionLine>) => {
-    setLine((prev) => ({ ...prev, ...updated }));
+    setLines((prev) =>
+      prev.map((l) => (l.id === line.id ? { ...l, ...updated } : l))
+    );
   };
 
+  // Create and activate a brand new line
+  const createLine = (newLine: ProductionLine) => {
+    setLines((prev) => [...prev, newLine]);
+    setActiveLineId(newLine.id);
+  };
+
+  // Duplicate an existing line to test variants / product models
+  const duplicateLine = (lineId: string) => {
+    const target = lines.find((l) => l.id === lineId) || line;
+    const cloned: ProductionLine = JSON.parse(JSON.stringify(target));
+    const newId = `line-${Date.now().toString().slice(-6)}`;
+    cloned.id = newId;
+    cloned.name = `${target.name} (${language === 'ar' ? 'نسخة مكررة' : 'Copy'})`;
+    setLines((prev) => [...prev, cloned]);
+    setActiveLineId(newId);
+  };
+
+  // Delete a line
+  const deleteLine = (lineId: string) => {
+    if (lines.length <= 1) {
+      return;
+    }
+
+    const remaining = lines.filter((l) => l.id !== lineId);
+    setLines(remaining);
+    if (activeLineId === lineId) {
+      setActiveLineId(remaining[0].id);
+    }
+  };
+
+  // Switch active line
+  const switchLine = (lineId: string) => {
+    const target = lines.find((l) => l.id === lineId);
+    if (target) {
+      setActiveLineId(target.id);
+    }
+  };
+
+  const switchLinePreset = (presetId: string) => {
+    switchLine(presetId);
+  };
+
+  // CRUD Operations on Active Line
   const addOperation = (op: Operation) => {
-    setLine((prev) => ({
-      ...prev,
-      operations: [...prev.operations, op],
-    }));
+    setLines((prev) =>
+      prev.map((l) =>
+        l.id === line.id ? { ...l, operations: [...l.operations, op] } : l
+      )
+    );
   };
 
   const updateOperation = (op: Operation) => {
-    setLine((prev) => ({
-      ...prev,
-      operations: prev.operations.map((o) => (o.id === op.id ? op : o)),
-    }));
+    setLines((prev) =>
+      prev.map((l) =>
+        l.id === line.id
+          ? { ...l, operations: l.operations.map((o) => (o.id === op.id ? op : o)) }
+          : l
+      )
+    );
   };
 
   const deleteOperation = (id: string) => {
-    setLine((prev) => ({
-      ...prev,
-      operations: prev.operations
-        .filter((o) => o.id !== id)
-        .map((o) => ({
-          ...o,
-          precedenceIds: (o.precedenceIds || []).filter((p) => p !== id),
-        })),
-    }));
+    setLines((prev) =>
+      prev.map((l) =>
+        l.id === line.id
+          ? {
+              ...l,
+              operations: l.operations
+                .filter((o) => o.id !== id)
+                .map((o) => ({
+                  ...o,
+                  precedenceIds: (o.precedenceIds || []).filter((p) => p !== id),
+                })),
+            }
+          : l
+      )
+    );
   };
 
   const addWorkstation = (ws: Workstation) => {
-    setLine((prev) => ({
-      ...prev,
-      workstations: [...prev.workstations, ws],
-    }));
+    setLines((prev) =>
+      prev.map((l) =>
+        l.id === line.id ? { ...l, workstations: [...l.workstations, ws] } : l
+      )
+    );
   };
 
   const updateWorkstation = (ws: Workstation) => {
-    setLine((prev) => ({
-      ...prev,
-      workstations: prev.workstations.map((w) => (w.id === ws.id ? ws : w)),
-    }));
+    setLines((prev) =>
+      prev.map((l) =>
+        l.id === line.id
+          ? { ...l, workstations: l.workstations.map((w) => (w.id === ws.id ? ws : w)) }
+          : l
+      )
+    );
   };
 
   const deleteWorkstation = (id: string) => {
-    setLine((prev) => {
-      const remainingStations = prev.workstations.filter((w) => w.id !== id);
-      const fallbackStationId = remainingStations[0]?.id || 'ws-1';
-      return {
-        ...prev,
-        workstations: remainingStations,
-        operations: prev.operations.map((op) =>
-          op.stationId === id ? { ...op, stationId: fallbackStationId } : op
-        ),
-      };
-    });
+    setLines((prev) =>
+      prev.map((l) => {
+        if (l.id !== line.id) return l;
+        const remainingStations = l.workstations.filter((w) => w.id !== id);
+        const fallbackStationId = remainingStations[0]?.id || 'ws-1';
+        return {
+          ...l,
+          workstations: remainingStations,
+          operations: l.operations.map((op) =>
+            op.stationId === id ? { ...op, stationId: fallbackStationId } : op
+          ),
+        };
+      })
+    );
   };
 
   const addOperator = (worker: Operator) => {
-    setLine((prev) => ({
-      ...prev,
-      operators: [...prev.operators, worker],
-    }));
+    setLines((prev) =>
+      prev.map((l) =>
+        l.id === line.id ? { ...l, operators: [...l.operators, worker] } : l
+      )
+    );
   };
 
   const updateOperator = (worker: Operator) => {
-    setLine((prev) => ({
-      ...prev,
-      operators: prev.operators.map((w) => (w.id === worker.id ? worker : w)),
-    }));
+    setLines((prev) =>
+      prev.map((l) =>
+        l.id === line.id
+          ? { ...l, operators: l.operators.map((w) => (w.id === worker.id ? worker : w)) }
+          : l
+      )
+    );
   };
 
   const deleteOperator = (id: string) => {
-    setLine((prev) => ({
-      ...prev,
-      operators: prev.operators.filter((w) => w.id !== id),
-      operations: prev.operations.map((op) =>
-        op.operatorId === id ? { ...op, operatorId: undefined } : op
-      ),
-    }));
+    setLines((prev) =>
+      prev.map((l) =>
+        l.id === line.id
+          ? {
+              ...l,
+              operators: l.operators.filter((w) => w.id !== id),
+              operations: l.operations.map((op) =>
+                op.operatorId === id ? { ...op, operatorId: undefined } : op
+              ),
+            }
+          : l
+      )
+    );
   };
 
   const applyScenario = (scenarioId: string) => {
     const sc = scenarios.find((s) => s.id === scenarioId);
     if (!sc) return;
 
-    setLine((prev) => {
-      const updatedOps = [...prev.operations];
-      sc.assignments.forEach((asg) => {
-        asg.operationIds.forEach((opId) => {
-          const target = updatedOps.find((o) => o.id === opId);
-          if (target) {
-            target.stationId = asg.stationId;
-          }
+    setLines((prevLines) =>
+      prevLines.map((l) => {
+        if (l.id !== line.id) return l;
+
+        const updatedOps = [...l.operations];
+        sc.assignments.forEach((asg) => {
+          asg.operationIds.forEach((opId) => {
+            const target = updatedOps.find((o) => o.id === opId);
+            if (target) {
+              target.stationId = asg.stationId;
+            }
+          });
         });
-      });
 
-      const assignedStationIds = new Set(sc.assignments.map((a) => a.stationId));
-      let updatedStations = prev.workstations;
-      if (scenarioId === 'scenario-b') {
-        updatedStations = prev.workstations.filter((w) => assignedStationIds.has(w.id));
-      }
+        const assignedStationIds = new Set(sc.assignments.map((a) => a.stationId));
+        let updatedStations = l.workstations;
+        if (scenarioId === 'scenario-b') {
+          updatedStations = l.workstations.filter((w) => assignedStationIds.has(w.id));
+        }
 
-      return {
-        ...prev,
-        workstations: updatedStations,
-        operations: updatedOps,
-      };
-    });
+        return {
+          ...l,
+          workstations: updatedStations,
+          operations: updatedOps,
+        };
+      })
+    );
   };
 
-  const switchLinePreset = (presetId: string) => {
-    const found = SAMPLE_LINES.find((l) => l.id === presetId);
-    if (found) {
-      setLine(JSON.parse(JSON.stringify(found)));
+  // Full Database Backup Import & Export
+  const importDatabase = (importedLines: ProductionLine[]) => {
+    if (Array.isArray(importedLines) && importedLines.length > 0) {
+      setLines(importedLines);
+      setActiveLineId(importedLines[0].id);
+      try {
+        localStorage.setItem(LINES_STORAGE_KEY, JSON.stringify(importedLines));
+        localStorage.setItem(ACTIVE_ID_STORAGE_KEY, importedLines[0].id);
+      } catch {}
     }
   };
 
+  const exportDatabase = () => {
+    const exportPayload = {
+      system: 'AI Production Line Balancer',
+      version: '2.4',
+      exportDate: new Date().toISOString(),
+      activeLineId,
+      lines,
+    };
+    const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(exportPayload, null, 2));
+    const downloadAnchor = document.createElement('a');
+    downloadAnchor.setAttribute('href', dataStr);
+    downloadAnchor.setAttribute('download', `AI_Line_Balancer_All_Lines_${new Date().toISOString().slice(0, 10)}.json`);
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+  };
+
+  // Reset to default sample lines
   const resetToSample = () => {
-    setLine(JSON.parse(JSON.stringify(SAMPLE_LINES[0])));
+    const freshSamples = JSON.parse(JSON.stringify(SAMPLE_LINES));
+    setLines(freshSamples);
+    setActiveLineId(freshSamples[0].id);
   };
 
   return (
@@ -318,7 +451,8 @@ export const LineProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       value={{
         line,
         activeLine: line,
-        lines: SAMPLE_LINES,
+        lines,
+        activeLineId,
         results,
         scenarios,
         activeTab,
@@ -340,6 +474,11 @@ export const LineProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         editingOperation,
         setEditingOperation,
         updateLine,
+        createLine,
+        duplicateLine,
+        deleteLine,
+        switchLine,
+        switchLinePreset,
         addOperation,
         updateOperation,
         deleteOperation,
@@ -350,7 +489,8 @@ export const LineProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         updateOperator,
         deleteOperator,
         applyScenario,
-        switchLinePreset,
+        importDatabase,
+        exportDatabase,
         resetToSample,
         resetToSampleData: resetToSample,
       }}

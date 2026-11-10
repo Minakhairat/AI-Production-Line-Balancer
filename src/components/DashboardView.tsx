@@ -206,9 +206,14 @@ export const DashboardView: React.FC = () => {
               {language === 'ar' ? 'قطعة/وردية' : 'units/shift'}
             </span>
           </div>
-          <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-2">
-            {results.hourlyCapacity.toFixed(1)} {language === 'ar' ? 'قطعة في الساعة' : 'units/hour'}
-          </p>
+          <div className="flex items-center justify-between mt-2 text-xs">
+            <span className="text-neutral-500 font-mono">
+              {results.hourlyCapacity.toFixed(1)} {language === 'ar' ? 'قطعة في الساعة' : 'units/hour'}
+            </span>
+            <span className="text-[10px] text-blue-600 dark:text-blue-400 font-mono font-bold" title={language === 'ar' ? 'معادلة الطاقة الإنتاجية للوردية = زمن الوردية المتاح ÷ زمن أعلى محطة' : 'Formula: Net Shift Time / Bottleneck CT'}>
+              {language === 'ar' ? '(المتاح ÷ الاختناق)' : '(Net ÷ Bottleneck)'}
+            </span>
+          </div>
           <div className="mt-3 pt-3 border-t border-neutral-100 dark:border-neutral-800/80 flex items-center justify-between text-xs text-neutral-500">
             <span>{language === 'ar' ? 'فارق الطلب:' : 'Demand Gap:'}</span>
             <span className={`font-semibold ${results.capacityBuffer >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>

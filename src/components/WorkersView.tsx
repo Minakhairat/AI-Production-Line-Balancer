@@ -18,6 +18,7 @@ export const WorkersView: React.FC = () => {
 
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [editingWorker, setEditingWorker] = useState<Operator | null>(null);
+  const [workerPendingDelete, setWorkerPendingDelete] = useState<Operator | null>(null);
 
   const [formName, setFormName] = useState<string>('');
   const [formShift, setFormShift] = useState<string>('Shift 1');
@@ -112,12 +113,9 @@ export const WorkersView: React.FC = () => {
                       <Edit2 className="w-3.5 h-3.5" />
                     </button>
                     <button
-                      onClick={() => {
-                        if (confirm(language === 'ar' ? `حذف ${worker.name}؟` : `Delete operator ${worker.name}?`)) {
-                          deleteOperator(worker.id);
-                        }
-                      }}
+                      onClick={() => setWorkerPendingDelete(worker)}
                       className="p-1.5 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/50 text-rose-500 transition-colors"
+                      title={language === 'ar' ? 'حذف المشغل' : 'Delete operator'}
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
@@ -254,6 +252,53 @@ export const WorkersView: React.FC = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Operator Confirmation Modal */}
+      {workerPendingDelete && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-scale-in">
+            <div className="flex items-center gap-3 text-rose-500">
+              <div className="p-3 rounded-full bg-rose-50 dark:bg-rose-950/50">
+                <Trash2 className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="font-bold text-base text-neutral-900 dark:text-white">
+                  {language === 'ar' ? 'تأكيد حذف المشغل' : 'Confirm Operator Deletion'}
+                </h3>
+                <p className="text-xs text-neutral-500">
+                  {language === 'ar' ? 'سيتم حذف المشغل من سجلات الخط' : 'Operator will be removed from line'}
+                </p>
+              </div>
+            </div>
+
+            <p className="text-sm text-neutral-600 dark:text-neutral-300 leading-relaxed">
+              {language === 'ar'
+                ? `هل أنت متأكد من حذف المشغل "${workerPendingDelete.name}" (كود: ${workerPendingDelete.id})؟`
+                : `Are you sure you want to delete operator "${workerPendingDelete.name}" (ID: ${workerPendingDelete.id})?`}
+            </p>
+
+            <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-neutral-100 dark:border-neutral-800">
+              <button
+                type="button"
+                onClick={() => setWorkerPendingDelete(null)}
+                className="px-4 py-2 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 font-medium text-xs hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
+              >
+                {language === 'ar' ? 'إلغاء' : 'Cancel'}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  deleteOperator(workerPendingDelete.id);
+                  setWorkerPendingDelete(null);
+                }}
+                className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs shadow-sm transition-colors"
+              >
+                {language === 'ar' ? 'حذف المشغل' : 'Delete Operator'}
+              </button>
+            </div>
           </div>
         </div>
       )}

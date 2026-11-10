@@ -28,6 +28,7 @@ export const WorkstationsView: React.FC = () => {
 
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [editingWs, setEditingWs] = useState<Workstation | null>(null);
+  const [stationPendingDelete, setStationPendingDelete] = useState<Workstation | null>(null);
 
   const [formName, setFormName] = useState<string>('');
   const [formSequence, setFormSequence] = useState<number>(line.workstations.length + 1);
@@ -138,15 +139,21 @@ export const WorkstationsView: React.FC = () => {
                       </button>
                       <button
                         onClick={() => {
-                          if (line.workstations.length <= 1) {
-                            alert(language === 'ar' ? 'لا يمكن حذف المحطة الوحيدة المتبقية في الخط' : 'Cannot delete the only station');
-                            return;
-                          }
-                          if (confirm(language === 'ar' ? `حذف ${ws.name}؟ سيتم نقل عملياتها للمحطة الأولى.` : `Delete station ${ws.name}?`)) {
-                            deleteWorkstation(ws.id);
+                          if (line.workstations.length > 1) {
+                            setStationPendingDelete(ws);
                           }
                         }}
-                        className="p-1.5 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/50 text-rose-500 transition-colors"
+                        disabled={line.workstations.length <= 1}
+                        className={`p-1.5 rounded-lg transition-colors ${
+                          line.workstations.length <= 1
+                            ? 'opacity-30 cursor-not-allowed text-neutral-400'
+                            : 'hover:bg-rose-50 dark:hover:bg-rose-950/50 text-rose-500'
+                        }`}
+                        title={
+                          line.workstations.length <= 1
+                            ? (language === 'ar' ? 'لا يمكن حذف المحطة الوحيدة المتبقية في الخط' : 'Cannot delete the only station')
+                            : (language === 'ar' ? 'حذف المحطة' : 'Delete station')
+                        }
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
@@ -313,6 +320,53 @@ export const WorkstationsView: React.FC = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Station Confirmation Modal */}
+      {stationPendingDelete && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-scale-in">
+            <div className="flex items-center gap-3 text-rose-500">
+              <div className="p-3 rounded-full bg-rose-50 dark:bg-rose-950/50">
+                <Trash2 className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="font-bold text-base text-neutral-900 dark:text-white">
+                  {language === 'ar' ? 'تأكيد حذف محطة العمل' : 'Confirm Workstation Deletion'}
+                </h3>
+                <p className="text-xs text-neutral-500">
+                  {language === 'ar' ? 'إعادة توجيه العمليات تلقائياً' : 'Operations will be automatically reassigned'}
+                </p>
+              </div>
+            </div>
+
+            <p className="text-sm text-neutral-600 dark:text-neutral-300 leading-relaxed">
+              {language === 'ar'
+                ? `هل أنت متأكد من حذف محطة العمل "${stationPendingDelete.name}"؟ سيتم نقل العمليات التابعة لها تلقائياً إلى المحطة الأولى.`
+                : `Are you sure you want to delete workstation "${stationPendingDelete.name}"? Any operations assigned to it will be reassigned to the first workstation.`}
+            </p>
+
+            <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-neutral-100 dark:border-neutral-800">
+              <button
+                type="button"
+                onClick={() => setStationPendingDelete(null)}
+                className="px-4 py-2 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 font-medium text-xs hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
+              >
+                {language === 'ar' ? 'إلغاء' : 'Cancel'}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  deleteWorkstation(stationPendingDelete.id);
+                  setStationPendingDelete(null);
+                }}
+                className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs shadow-sm transition-colors"
+              >
+                {language === 'ar' ? 'حذف المحطة' : 'Delete Station'}
+              </button>
+            </div>
           </div>
         </div>
       )}

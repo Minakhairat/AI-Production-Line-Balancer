@@ -19,20 +19,12 @@ export const ScenarioComparisonView: React.FC = () => {
     useLineBalancing();
 
   const [activeTabScenario, setActiveTabScenario] = useState<string>('scenario-a');
+  const [scenarioPendingApply, setScenarioPendingApply] = useState<string | null>(null);
 
   const selectedScenario = scenarios.find((s) => s.id === activeTabScenario) || scenarios[0];
 
   const handleApply = (scId: string) => {
-    if (
-      confirm(
-        language === 'ar'
-          ? `هل أنت متأكد من تطبيق هذا السيناريو على خط الإنتاج الفعلي؟ سيتم إعادة توزيع العمليات بين المحطات.`
-          : `Apply this scenario to your live production line? Tasks will be reallocated across workstations.`
-      )
-    ) {
-      applyScenario(scId);
-      setActiveTab('yamazumi');
-    }
+    setScenarioPendingApply(scId);
   };
 
   return (
@@ -345,6 +337,54 @@ export const ScenarioComparisonView: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Apply Scenario Confirmation Modal */}
+      {scenarioPendingApply && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-scale-in">
+            <div className="flex items-center gap-3 text-indigo-500">
+              <div className="p-3 rounded-full bg-indigo-50 dark:bg-indigo-950/50">
+                <Sparkles className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="font-bold text-base text-neutral-900 dark:text-white">
+                  {language === 'ar' ? 'تأكيد تطبيق سيناريو التحسين' : 'Confirm Scenario Application'}
+                </h3>
+                <p className="text-xs text-neutral-500">
+                  {language === 'ar' ? 'تحديث توزيع العمليات على الخط' : 'Reallocates operations on live line'}
+                </p>
+              </div>
+            </div>
+
+            <p className="text-sm text-neutral-600 dark:text-neutral-300 leading-relaxed">
+              {language === 'ar'
+                ? 'هل أنت متأكد من تطبيق هذا السيناريو على خط الإنتاج الفعلي؟ سيتم إعادة توزيع العمليات بين محطات العمل وفقاً لخوارزمية التحسين.'
+                : 'Apply this scenario to your live production line? Tasks will be reallocated across workstations according to the optimization algorithm.'}
+            </p>
+
+            <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-neutral-100 dark:border-neutral-800">
+              <button
+                type="button"
+                onClick={() => setScenarioPendingApply(null)}
+                className="px-4 py-2 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 font-medium text-xs hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
+              >
+                {language === 'ar' ? 'إلغاء' : 'Cancel'}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  applyScenario(scenarioPendingApply);
+                  setScenarioPendingApply(null);
+                  setActiveTab('yamazumi');
+                }}
+                className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-sm transition-colors"
+              >
+                {language === 'ar' ? 'تطبيق السيناريو' : 'Apply Scenario'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

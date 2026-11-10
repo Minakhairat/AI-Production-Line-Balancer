@@ -19,6 +19,8 @@ interface NavbarProps {
 export const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
   const {
     line,
+    lines,
+    switchLine,
     results,
     language,
     setLanguage,
@@ -66,6 +68,23 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
                 {language === 'ar' ? 'نظام موازنة خطوط الإنتاج والتحسين بالذكاء الاصطناعي' : 'Assembly Line Balancing & Optimization System'}
               </p>
             </div>
+          </div>
+
+          {/* Quick Line Selector Dropdown */}
+          <div className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-xs border border-neutral-200 dark:border-neutral-700/60">
+            <span className="text-neutral-400 font-medium shrink-0">{t('activeLine')}:</span>
+            <select
+              value={line.id}
+              onChange={(e) => switchLine(e.target.value)}
+              className="bg-transparent text-neutral-900 dark:text-white font-bold cursor-pointer outline-none text-xs max-w-[210px] truncate"
+              title={language === 'ar' ? 'التبديل بين خطوط وموديلات الإنتاج' : 'Switch Active Production Line Model'}
+            >
+              {lines.map((l) => (
+                <option key={l.id} value={l.id} className="bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white">
+                  {l.name}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
 

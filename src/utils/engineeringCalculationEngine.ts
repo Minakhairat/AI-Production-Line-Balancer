@@ -486,19 +486,19 @@ export function calculateLineBalancingRobust(line: ProductionLine): AdvancedEngi
     taktTime > 0 ? Math.max(1, Math.ceil(totalWorkContent / taktTime)) : 1;
 
   // Step 9: Production Capacity & Idle Time per shift
+  // Engineering Standard & User Formula: Shift Capacity = Net Available Shift Time / Highest Station Cycle Time (Bottleneck)
+  const shiftCapacity =
+    lineCycleTime > 0 ? Math.floor(netAvailableTime / lineCycleTime) : 0;
+
+  const hourlyCapacity =
+    lineCycleTime > 0 ? Number((3600 / lineCycleTime).toFixed(1)) : 0;
+
+  const capacityBuffer = shiftCapacity - line.customerDemand;
+
   const totalIdleTimePerShift =
     lineCycleTime > 0
       ? Number(((netAvailableTime / lineCycleTime) * (totalIdleTimePerCycle / 3600)).toFixed(2))
       : 0;
-
-  const oeeFactor = Math.min(1, Math.max(0.1, (line.oeeTarget || 85) / 100));
-  const hourlyCapacity =
-    lineCycleTime > 0 ? Number(((3600 / lineCycleTime) * oeeFactor).toFixed(1)) : 0;
-
-  const rawShiftCapacity =
-    lineCycleTime > 0 ? Math.floor(netAvailableTime / lineCycleTime) : 0;
-  const shiftCapacity = Math.round(rawShiftCapacity * oeeFactor);
-  const capacityBuffer = shiftCapacity - line.customerDemand;
 
   return {
     netAvailableTime,
